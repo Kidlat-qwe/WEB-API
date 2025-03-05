@@ -4,18 +4,14 @@ CREATE DATABASE school_db;
 -- Users Table
 CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
-    username VARCHAR(50),
-    password VARCHAR(100),
-    email VARCHAR(100),
-    user_type VARCHAR(20),
-    fname VARCHAR(50),
-    mname VARCHAR(50),
-    lname VARCHAR(50),
-    gender VARCHAR(1),
-    teacher_status BOOLEAN,
-    firebase_uid VARCHAR(128),
-    age INTEGER,
-    flag BOOLEAN DEFAULT TRUE
+    email character varying(25),
+    user_type character varying(20),
+    fname character varying(50),
+    mname character varying(50),
+    lname character varying(50),
+    gender character varying(1),
+    teacher_status boolean,
+    firebase_uid character varying(128)
 );
 
 -- School Year Table
@@ -67,12 +63,12 @@ CREATE TABLE class_subject (
 );
 
 -- Insert Users (Including both teachers and students)
-INSERT INTO users (email, user_type, fname, mname, lname, gender, teacher_status, firebase_uid, age) VALUES
-('admin@school.com', 'Admin', 'Admin', NULL, 'User', 'M', FALSE, 'admin123', NULL),
-('john.doe@school.com', 'Teacher', 'John', 'A.', 'Doe', 'M', TRUE, 'teacher123', NULL),
-('jane.doe@school.com', 'Teacher', 'Jane', 'B.', 'Doe', 'F', TRUE, 'teacher456', NULL),
-('alice.j@school.com', 'Student', 'Alice', 'M.', 'Johnson', 'F', FALSE, 'student123', 12),
-('bob.s@school.com', 'Student', 'Bob', 'L.', 'Smith', 'M', FALSE, 'student456', 13);
+INSERT INTO users (email, user_type, fname, mname, lname, gender, teacher_status, firebase_uid) VALUES
+('admin@school.com', 'Admin', 'Admin', NULL, 'User', 'M', FALSE, 'admin123'),
+('john.doe@school.com', 'Teacher', 'John', 'A.', 'Doe', 'M', TRUE, 'teacher123'),
+('jane.doe@school.com', 'Teacher', 'Jane', 'B.', 'Doe', 'F', TRUE, 'teacher456'),
+('alice.j@school.com', 'Student', 'Alice', 'M.', 'Johnson', 'F', FALSE, 'student123'),
+('bob.s@school.com', 'Student', 'Bob', 'L.', 'Smith', 'M', FALSE, 'student456');
 
 -- Insert School Years
 INSERT INTO school_year (school_year, is_active) VALUES

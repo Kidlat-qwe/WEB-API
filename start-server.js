@@ -452,12 +452,298 @@ app.post('/auth/login', async (req, res) => {
 });
 
 // GET endpoint to fetch all users
-app.get('/users', async (req, res) => {
+app.get('/users', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Users - School Management Database</title>
+      <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+          background: #f8fafc;
+        }
+
+        .nav {
+          background: #3b82f6;
+          color: white;
+          padding: 1rem;
+          display: flex;
+          align-items: center;
+          gap: 2rem;
+        }
+
+        .nav-brand {
+          font-weight: bold;
+          font-size: 1.1rem;
+          color: white;
+          text-decoration: none;
+        }
+
+        .nav-links {
+          display: flex;
+          gap: 1.5rem;
+        }
+
+        .nav-link {
+          color: white;
+          text-decoration: none;
+          font-size: 0.9rem;
+        }
+
+        .container {
+          max-width: 1200px;
+          margin: 2rem auto;
+          padding: 0 1rem;
+        }
+
+        .header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 2rem;
+        }
+
+        .page-title {
+          font-size: 1.5rem;
+          font-weight: 600;
+          color: #1e293b;
+        }
+
+        .add-button {
+          background: #2563eb;
+          color: white;
+          border: none;
+          padding: 0.5rem 1rem;
+          border-radius: 0.375rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+
+        .add-button:hover {
+          background: #1d4ed8;
+        }
+
+        .users-table {
+          width: 100%;
+          background: white;
+          border-radius: 0.5rem;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          border-collapse: collapse;
+          overflow: hidden;
+        }
+
+        .users-table th,
+        .users-table td {
+          padding: 0.75rem 1rem;
+          text-align: left;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .users-table th {
+          background: #f8fafc;
+          font-weight: 600;
+          color: #475569;
+          font-size: 0.875rem;
+        }
+
+        .users-table tr:last-child td {
+          border-bottom: none;
+        }
+
+        .users-table tbody tr:hover {
+          background: #f8fafc;
+        }
+
+        .action-buttons {
+          display: flex;
+          gap: 0.5rem;
+        }
+
+        .edit-button,
+        .delete-button {
+          padding: 0.25rem 0.75rem;
+          border-radius: 0.25rem;
+          border: none;
+          font-size: 0.875rem;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+
+        .edit-button {
+          background: #3b82f6;
+          color: white;
+        }
+
+        .edit-button:hover {
+          background: #2563eb;
+        }
+
+        .delete-button {
+          background: #ef4444;
+          color: white;
+        }
+
+        .delete-button:hover {
+          background: #dc2626;
+        }
+
+        .status-badge {
+          padding: 0.25rem 0.5rem;
+          border-radius: 0.25rem;
+          font-size: 0.875rem;
+          font-weight: 500;
+        }
+
+        .status-true {
+          background: #dcfce7;
+          color: #166534;
+        }
+
+        .status-false {
+          background: #fee2e2;
+          color: #991b1b;
+        }
+      </style>
+    </head>
+    <body>
+      <nav class="nav">
+        <a href="/" class="nav-brand">School Management Database</a>
+        <div class="nav-links">
+          <a href="/dashboard" class="nav-link">Dashboard</a>
+          <a href="/users" class="nav-link">Users</a>
+          <a href="/classes" class="nav-link">Classes</a>
+          <a href="/subjects" class="nav-link">Subjects</a>
+          <a href="/student-grade" class="nav-link">Student Grade</a>
+          <a href="/class-subject" class="nav-link">Class Subject</a>
+          <a href="/class-student" class="nav-link">Class Student</a>
+          <a href="/school-year" class="nav-link">School Year</a>
+        </div>
+      </nav>
+
+      <div class="container">
+        <div class="header">
+          <h1 class="page-title">Users Management</h1>
+          <button class="add-button" onclick="addUser()">Add User</button>
+        </div>
+        
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Email</th>
+              <th>User Type</th>
+              <th>First Name</th>
+              <th>Middle Name</th>
+              <th>Last Name</th>
+              <th>Gender</th>
+              <th>Teacher Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="usersTableBody">
+            <!-- Data will be populated here -->
+          </tbody>
+        </table>
+      </div>
+
+      <script>
+        // Fetch and display users data
+        async function fetchUsers() {
+          try {
+            const response = await fetch('/api/users');
+            if (!response.ok) {
+              throw new Error('Failed to fetch users');
+            }
+            const users = await response.json();
+            
+            const tableBody = document.getElementById('usersTableBody');
+            tableBody.innerHTML = users.map(user => 
+              '<tr>' +
+                '<td>' + (user.user_id || '') + '</td>' +
+                '<td>' + (user.email || '') + '</td>' +
+                '<td>' + (user.user_type || '') + '</td>' +
+                '<td>' + (user.fname || '') + '</td>' +
+                '<td>' + (user.mname || '-') + '</td>' +
+                '<td>' + (user.lname || '') + '</td>' +
+                '<td>' + (user.gender || '') + '</td>' +
+                '<td><span class="status-badge status-' + user.teacher_status + '">' + 
+                  (user.teacher_status ? 'Active' : 'Inactive') + '</span></td>' +
+                '<td class="action-buttons">' +
+                  '<button class="edit-button" onclick="editUser(' + user.user_id + ')">Edit</button>' +
+                  '<button class="delete-button" onclick="deleteUser(' + user.user_id + ')">Delete</button>' +
+                '</td>' +
+              '</tr>'
+            ).join('');
+          } catch (error) {
+            console.error('Error fetching users:', error);
+            document.getElementById('usersTableBody').innerHTML = 
+              '<tr><td colspan="9" style="text-align: center; color: #dc2626;">Failed to load users data. Please try again later.</td></tr>';
+          }
+        }
+
+        function addUser() {
+          // Implement add user functionality
+          alert('Add user functionality will be implemented');
+        }
+
+        function editUser(id) {
+          // Implement edit user functionality
+          alert('Edit user functionality will be implemented for ID: ' + id);
+        }
+
+        async function deleteUser(id) {
+          if (confirm('Are you sure you want to delete this user?')) {
+            try {
+              const response = await fetch('/api/users/' + id, {
+                method: 'DELETE'
+              });
+              
+              if (!response.ok) {
+                throw new Error('Failed to delete user');
+              }
+              
+              // Refresh the table after successful deletion
+              fetchUsers();
+            } catch (error) {
+              console.error('Error deleting user:', error);
+              alert('Failed to delete user. Please try again.');
+            }
+          }
+        }
+
+        // Load users when the page loads
+        window.addEventListener('load', fetchUsers);
+      </script>
+    </body>
+    </html>
+  `);
+});
+
+// GET endpoint to fetch all users
+app.get('/api/users', async (req, res) => {
   try {
-    console.log('GET /users called');
-    const result = await pool.query(
-      'SELECT user_id, username, user_type, flag FROM users ORDER BY user_id'
-    );
+    const result = await pool.query(`
+      SELECT 
+        user_id,
+        email,
+        user_type,
+        fname,
+        mname,
+        lname,
+        gender,
+        teacher_status,
+        firebase_uid
+      FROM users 
+      ORDER BY user_type, lname, fname
+    `);
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -1518,177 +1804,6 @@ app.get('/api/grades/stats/class/:classId', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
-// Add students page route
-app.get('/students', (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Students - School Management Database</title>
-      <style>
-        * {
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }
-
-        body {
-          background: #f8fafc;
-        }
-
-        .nav {
-          background: #3b82f6;
-          color: white;
-          padding: 1rem;
-          display: flex;
-          align-items: center;
-          gap: 2rem;
-        }
-
-        .nav-brand {
-          font-weight: bold;
-          font-size: 1.1rem;
-          color: white;
-          text-decoration: none;
-        }
-
-        .nav-links {
-          display: flex;
-          gap: 1.5rem;
-        }
-
-        .nav-link {
-          color: white;
-          text-decoration: none;
-          font-size: 0.9rem;
-        }
-
-        .container {
-          max-width: 1200px;
-          margin: 2rem auto;
-          padding: 0 1rem;
-        }
-
-        .header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 2rem;
-        }
-
-        .page-title {
-          font-size: 1.5rem;
-          font-weight: 600;
-          color: #1e293b;
-        }
-
-        .add-button {
-          background: #2563eb;
-          color: white;
-          border: none;
-          padding: 0.5rem 1rem;
-          border-radius: 0.375rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: background-color 0.2s;
-        }
-
-        .add-button:hover {
-          background: #1d4ed8;
-        }
-
-        .students-table {
-          width: 100%;
-          background: white;
-          border-radius: 0.5rem;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-          border-collapse: collapse;
-          overflow: hidden;
-        }
-
-        .students-table th,
-        .students-table td {
-          padding: 0.75rem 1rem;
-          text-align: left;
-          border-bottom: 1px solid #e2e8f0;
-        }
-
-        .students-table th {
-          background: #f8fafc;
-          font-weight: 600;
-          color: #475569;
-          font-size: 0.875rem;
-        }
-
-        .students-table tr:last-child td {
-          border-bottom: none;
-        }
-
-        .students-table tbody tr:hover {
-          background: #f8fafc;
-        }
-
-        .action-buttons {
-          display: flex;
-          gap: 0.5rem;
-        }
-
-        .edit-button,
-        .delete-button {
-          padding: 0.25rem 0.75rem;
-          border-radius: 0.25rem;
-          border: none;
-          font-size: 0.875rem;
-          cursor: pointer;
-          transition: background-color 0.2s;
-        }
-
-        .edit-button {
-          background: #3b82f6;
-          color: white;
-        }
-
-        .edit-button:hover {
-          background: #2563eb;
-        }
-
-        .delete-button {
-          background: #ef4444;
-          color: white;
-        }
-
-        .delete-button:hover {
-          background: #dc2626;
-        }
-      </style>
-    </head>
-    <body>
-      <nav class="nav">
-        <a href="/" class="nav-brand">School Management Database</a>
-        <div class="nav-links">
-          <a href="/dashboard" class="nav-link">Dashboard</a>
-          <a href="/classes" class="nav-link">Classes</a>
-          <a href="/subjects" class="nav-link">Subjects</a>
-          <a href="/student-grade" class="nav-link">Student Grade</a>
-          <a href="/class-subject" class="nav-link">Class Subject</a>
-          <a href="/class-student" class="nav-link">Class Student</a>
-          <a href="/school-year" class="nav-link">School Year</a>
-          <a href="/users" class="nav-link">Users</a>
-        </div>
-      </nav>
-
-
-        // Load students when the page loads
-        window.addEventListener('load', fetchStudents);
-      </script>
-    </body>
-    </html>
-  `);
-});
-
-
 
 // Root route - Dashboard
 app.get('/', (req, res) => {

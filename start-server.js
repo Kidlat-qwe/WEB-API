@@ -1925,6 +1925,276 @@ app.get('/dashboard', async (req, res) => {
   }
 });
 
+// Classes page route
+app.get('/classes', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Classes - School Management Database</title>
+      <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+          background: #f8fafc;
+        }
+
+        .nav {
+          background: #3b82f6;
+          color: white;
+          padding: 1rem;
+          display: flex;
+          align-items: center;
+          gap: 2rem;
+        }
+
+        .nav-brand {
+          font-weight: bold;
+          font-size: 1.1rem;
+          color: white;
+          text-decoration: none;
+        }
+
+        .nav-links {
+          display: flex;
+          gap: 1.5rem;
+        }
+
+        .nav-link {
+          color: white;
+          text-decoration: none;
+          font-size: 0.9rem;
+        }
+
+        .container {
+          max-width: 1200px;
+          margin: 2rem auto;
+          padding: 0 1rem;
+        }
+
+        .header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 2rem;
+        }
+
+        .page-title {
+          font-size: 1.5rem;
+          font-weight: 600;
+          color: #1e293b;
+        }
+
+        .add-button {
+          background: #2563eb;
+          color: white;
+          border: none;
+          padding: 0.5rem 1rem;
+          border-radius: 0.375rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+
+        .add-button:hover {
+          background: #1d4ed8;
+        }
+
+        .classes-table {
+          width: 100%;
+          background: white;
+          border-radius: 0.5rem;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          border-collapse: collapse;
+          overflow: hidden;
+        }
+
+        .classes-table th,
+        .classes-table td {
+          padding: 0.75rem 1rem;
+          text-align: left;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .classes-table th {
+          background: #f8fafc;
+          font-weight: 600;
+          color: #475569;
+          font-size: 0.875rem;
+        }
+
+        .classes-table tr:last-child td {
+          border-bottom: none;
+        }
+
+        .classes-table tbody tr:hover {
+          background: #f8fafc;
+        }
+
+        .action-buttons {
+          display: flex;
+          gap: 0.5rem;
+        }
+
+        .edit-button,
+        .delete-button {
+          padding: 0.25rem 0.75rem;
+          border-radius: 0.25rem;
+          border: none;
+          font-size: 0.875rem;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+
+        .edit-button {
+          background: #3b82f6;
+          color: white;
+        }
+
+        .edit-button:hover {
+          background: #2563eb;
+        }
+
+        .delete-button {
+          background: #ef4444;
+          color: white;
+        }
+
+        .delete-button:hover {
+          background: #dc2626;
+        }
+
+        .grade-badge {
+          padding: 0.25rem 0.5rem;
+          border-radius: 0.25rem;
+          font-size: 0.875rem;
+          font-weight: 500;
+          background: #e0f2fe;
+          color: #0369a1;
+        }
+
+        .section-badge {
+          padding: 0.25rem 0.5rem;
+          border-radius: 0.25rem;
+          font-size: 0.875rem;
+          font-weight: 500;
+          background: #f0fdf4;
+          color: #166534;
+        }
+      </style>
+    </head>
+    <body>
+      <nav class="nav">
+        <a href="/" class="nav-brand">School Management Database</a>
+        <div class="nav-links">
+          <a href="/dashboard" class="nav-link">Dashboard</a>
+          <a href="/users" class="nav-link">Users</a>
+          <a href="/classes" class="nav-link">Classes</a>
+          <a href="/subjects" class="nav-link">Subjects</a>
+          <a href="/student-grade" class="nav-link">Student Grade</a>
+          <a href="/class-subject" class="nav-link">Class Subject</a>
+          <a href="/class-student" class="nav-link">Class Student</a>
+          <a href="/school-year" class="nav-link">School Year</a>
+        </div>
+      </nav>
+
+      <div class="container">
+        <div class="header">
+          <h1 class="page-title">Classes Management</h1>
+          <button class="add-button" onclick="addClass()">Add Class</button>
+        </div>
+        
+        <table class="classes-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Grade Level</th>
+              <th>Section</th>
+              <th>Description</th>
+              <th>School Year</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="classesTableBody">
+            <!-- Data will be populated here -->
+          </tbody>
+        </table>
+      </div>
+
+      <script>
+        // Fetch and display classes data
+        async function fetchClasses() {
+          try {
+            const response = await fetch('/api/classes');
+            if (!response.ok) {
+              throw new Error('Failed to fetch classes');
+            }
+            const classes = await response.json();
+            
+            const tableBody = document.getElementById('classesTableBody');
+            tableBody.innerHTML = classes.map(classItem => 
+              '<tr>' +
+                '<td>' + (classItem.class_id || '') + '</td>' +
+                '<td><span class="grade-badge">Grade ' + (classItem.grade_level || '') + '</span></td>' +
+                '<td><span class="section-badge">Section ' + (classItem.section || '') + '</span></td>' +
+                '<td>' + (classItem.class_description || '-') + '</td>' +
+                '<td>' + (classItem.school_year || '') + '</td>' +
+                '<td class="action-buttons">' +
+                  '<button class="edit-button" onclick="editClass(' + classItem.class_id + ')">Edit</button>' +
+                  '<button class="delete-button" onclick="deleteClass(' + classItem.class_id + ')">Delete</button>' +
+                '</td>' +
+              '</tr>'
+            ).join('');
+          } catch (error) {
+            console.error('Error fetching classes:', error);
+            document.getElementById('classesTableBody').innerHTML = 
+              '<tr><td colspan="6" style="text-align: center; color: #dc2626;">Failed to load classes data. Please try again later.</td></tr>';
+          }
+        }
+
+        function addClass() {
+          // Implement add class functionality
+          alert('Add class functionality will be implemented');
+        }
+
+        function editClass(id) {
+          // Implement edit class functionality
+          alert('Edit class functionality will be implemented for ID: ' + id);
+        }
+
+        async function deleteClass(id) {
+          if (confirm('Are you sure you want to delete this class?')) {
+            try {
+              const response = await fetch('/api/classes/' + id, {
+                method: 'DELETE'
+              });
+              
+              if (!response.ok) {
+                throw new Error('Failed to delete class');
+              }
+              
+              // Refresh the table after successful deletion
+              fetchClasses();
+            } catch (error) {
+              console.error('Error deleting class:', error);
+              alert('Failed to delete class. Please try again.');
+            }
+          }
+        }
+
+        // Load classes when the page loads
+        window.addEventListener('load', fetchClasses);
+      </script>
+    </body>
+    </html>
+  `);
+});
+
 // Create a more robust server startup
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Server running on http://localhost:${PORT}`);

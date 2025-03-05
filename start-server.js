@@ -1813,11 +1813,17 @@ app.get('/', (req, res) => {
 // Dashboard route
 app.get('/dashboard', async (req, res) => {
   try {
-    res.send(`
-    <!DOCTYPE html>
+    // Get counts from database
+    const studentCount = await pool.query("SELECT COUNT(*) FROM users WHERE user_type = 'Student'");
+    const teacherCount = await pool.query("SELECT COUNT(*) FROM users WHERE user_type = 'Teacher'");
+    const classCount = await pool.query("SELECT COUNT(*) FROM class");
+    const subjectCount = await pool.query("SELECT COUNT(*) FROM subject");
+
+    res.send(`<!DOCTYPE html>
     <html>
     <head>
       <title>School Management Database</title>
+      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
       <style>
         * {
           margin: 0;
@@ -1898,6 +1904,27 @@ app.get('/dashboard', async (req, res) => {
           font-size: 0.9rem;
           opacity: 0.9;
         }
+
+        .charts-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+          gap: 2rem;
+          margin-top: 2rem;
+        }
+
+        .chart-container {
+          background: white;
+          padding: 1.5rem;
+          border-radius: 8px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .chart-title {
+          font-size: 1.1rem;
+          color: #1f2937;
+          margin-bottom: 1rem;
+          text-align: center;
+        }
       </style>
     </head>
     <body>
@@ -1915,1467 +1942,170 @@ app.get('/dashboard', async (req, res) => {
         </div>
       </nav>
 
+      <div class="container">
+        <h1 class="dashboard-title">Dashboard Overview</h1>
+        
+        <div class="stats-grid">
+          <div class="stat-card students">
+            <div class="stat-number">${studentCount.rows[0].count}</div>
+            <div class="stat-label">Students</div>
+          </div>
+          <div class="stat-card teachers">
+            <div class="stat-number">${teacherCount.rows[0].count}</div>
+            <div class="stat-label">Teachers</div>
+          </div>
+          <div class="stat-card classes">
+            <div class="stat-number">${classCount.rows[0].count}</div>
+            <div class="stat-label">Classes</div>
+          </div>
+          <div class="stat-card subjects">
+            <div class="stat-number">${subjectCount.rows[0].count}</div>
+            <div class="stat-label">Subjects</div>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="chart-container">
+            <h2 class="chart-title">Student Distribution by Grade Level</h2>
+            <canvas id="gradeDistributionChart"></canvas>
+          </div>
+          <div class="chart-container">
+            <h2 class="chart-title">Subject Distribution</h2>
+            <canvas id="subjectDistributionChart"></canvas>
+          </div>
+          <div class="chart-container">
+            <h2 class="chart-title">Average Grades by Subject</h2>
+            <canvas id="gradesBySubjectChart"></canvas>
+          </div>
+          <div class="chart-container">
+            <h2 class="chart-title">Teacher Workload</h2>
+            <canvas id="teacherWorkloadChart"></canvas>
+          </div>
+        </div>
       </div>
+
+      <script>
+        async function initializeCharts() {
+          try {
+            const gradeDistResponse = await fetch('/api/stats/grade-distribution');
+            const gradeDistData = await gradeDistResponse.json();
+            
+            new Chart(document.getElementById('gradeDistributionChart'), {
+              type: 'bar',
+              data: {
+                labels: gradeDistData.map(d => 'Grade ' + d.grade_level),
+                datasets: [{
+                  label: 'Number of Students',
+                  data: gradeDistData.map(d => d.count),
+                  backgroundColor: '#3b82f6'
+                }]
+              },
+              options: {
+                responsive: true,
+                plugins: {
+                  legend: {
+                    position: 'top'
+                  }
+                }
+              }
+            });
+
+            const subjectDistResponse = await fetch('/api/stats/subject-distribution');
+            const subjectDistData = await subjectDistResponse.json();
+            
+            new Chart(document.getElementById('subjectDistributionChart'), {
+              type: 'pie',
+              data: {
+                labels: subjectDistData.map(d => d.subject_name),
+                datasets: [{
+                  data: subjectDistData.map(d => d.count),
+                  backgroundColor: [
+                    '#3b82f6',
+                    '#10b981',
+                    '#06b6d4',
+                    '#fbbf24',
+                    '#ef4444'
+                  ]
+                }]
+              },
+              options: {
+                responsive: true,
+                plugins: {
+                  legend: {
+                    position: 'right'
+                  }
+                }
+              }
+            });
+
+            const gradesBySubjectResponse = await fetch('/api/stats/grades-by-subject');
+            const gradesBySubjectData = await gradesBySubjectResponse.json();
+            
+            new Chart(document.getElementById('gradesBySubjectChart'), {
+              type: 'bar',
+              data: {
+                labels: gradesBySubjectData.map(d => d.subject_name),
+                datasets: [{
+                  label: 'Average Grade',
+                  data: gradesBySubjectData.map(d => d.average_grade),
+                  backgroundColor: '#10b981'
+                }]
+              },
+              options: {
+                responsive: true,
+                plugins: {
+                  legend: {
+                    position: 'top'
+                  }
+                },
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    max: 100
+                  }
+                }
+              }
+            });
+
+            const teacherWorkloadResponse = await fetch('/api/stats/teacher-workload');
+            const teacherWorkloadData = await teacherWorkloadResponse.json();
+            
+            new Chart(document.getElementById('teacherWorkloadChart'), {
+              type: 'bar',
+              data: {
+                labels: teacherWorkloadData.map(d => d.teacher_name),
+                datasets: [{
+                  label: 'Number of Classes',
+                  data: teacherWorkloadData.map(d => d.class_count),
+                  backgroundColor: '#06b6d4'
+                }]
+              },
+              options: {
+                responsive: true,
+                plugins: {
+                  legend: {
+                    position: 'top'
+                  }
+                },
+                scales: {
+                  y: {
+                    beginAtZero: true
+                  }
+                }
+              }
+            });
+          } catch (error) {
+            console.error('Error initializing charts:', error);
+          }
+        }
+
+        window.addEventListener('load', initializeCharts);
+      </script>
     </body>
-    </html>
-  `);
+    </html>`);
   } catch (error) {
     console.error('Error loading dashboard:', error);
     res.status(500).send('Error loading dashboard');
-  }
-});
-
-// Classes page route
-app.get('/classes', (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Classes - School Management Database</title>
-      <style>
-        * {
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }
-
-        body {
-          background: #f8fafc;
-        }
-
-        .nav {
-          background: #3b82f6;
-          color: white;
-          padding: 1rem;
-          display: flex;
-          align-items: center;
-          gap: 2rem;
-        }
-
-        .nav-brand {
-          font-weight: bold;
-          font-size: 1.1rem;
-          color: white;
-          text-decoration: none;
-        }
-
-        .nav-links {
-          display: flex;
-          gap: 1.5rem;
-        }
-
-        .nav-link {
-          color: white;
-          text-decoration: none;
-          font-size: 0.9rem;
-        }
-
-        .container {
-          max-width: 1200px;
-          margin: 2rem auto;
-          padding: 0 1rem;
-        }
-
-        .header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 2rem;
-        }
-
-        .page-title {
-          font-size: 1.5rem;
-          font-weight: 600;
-          color: #1e293b;
-        }
-
-        .add-button {
-          background: #2563eb;
-          color: white;
-          border: none;
-          padding: 0.5rem 1rem;
-          border-radius: 0.375rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: background-color 0.2s;
-        }
-
-        .add-button:hover {
-          background: #1d4ed8;
-        }
-
-        .classes-table {
-          width: 100%;
-          background: white;
-          border-radius: 0.5rem;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-          border-collapse: collapse;
-          overflow: hidden;
-        }
-
-        .classes-table th,
-        .classes-table td {
-          padding: 0.75rem 1rem;
-          text-align: left;
-          border-bottom: 1px solid #e2e8f0;
-        }
-
-        .classes-table th {
-          background: #f8fafc;
-          font-weight: 600;
-          color: #475569;
-          font-size: 0.875rem;
-        }
-
-        .classes-table tr:last-child td {
-          border-bottom: none;
-        }
-
-        .classes-table tbody tr:hover {
-          background: #f8fafc;
-        }
-
-        .action-buttons {
-          display: flex;
-          gap: 0.5rem;
-        }
-
-        .edit-button,
-        .delete-button {
-          padding: 0.25rem 0.75rem;
-          border-radius: 0.25rem;
-          border: none;
-          font-size: 0.875rem;
-          cursor: pointer;
-          transition: background-color 0.2s;
-        }
-
-        .edit-button {
-          background: #3b82f6;
-          color: white;
-        }
-
-        .edit-button:hover {
-          background: #2563eb;
-        }
-
-        .delete-button {
-          background: #ef4444;
-          color: white;
-        }
-
-        .delete-button:hover {
-          background: #dc2626;
-        }
-
-        .grade-badge {
-          padding: 0.25rem 0.5rem;
-          border-radius: 0.25rem;
-          font-size: 0.875rem;
-          font-weight: 500;
-          background: #e0f2fe;
-          color: #0369a1;
-        }
-
-        .section-badge {
-          padding: 0.25rem 0.5rem;
-          border-radius: 0.25rem;
-          font-size: 0.875rem;
-          font-weight: 500;
-          background: #f0fdf4;
-          color: #166534;
-        }
-      </style>
-    </head>
-    <body>
-      <nav class="nav">
-        <a href="/" class="nav-brand">School Management Database</a>
-        <div class="nav-links">
-          <a href="/dashboard" class="nav-link">Dashboard</a>
-          <a href="/users" class="nav-link">Users</a>
-          <a href="/classes" class="nav-link">Classes</a>
-          <a href="/subjects" class="nav-link">Subjects</a>
-          <a href="/student-grade" class="nav-link">Student Grade</a>
-          <a href="/class-subject" class="nav-link">Class Subject</a>
-          <a href="/class-student" class="nav-link">Class Student</a>
-          <a href="/school-year" class="nav-link">School Year</a>
-        </div>
-      </nav>
-
-      <div class="container">
-        <div class="header">
-          <h1 class="page-title">Classes Management</h1>
-          <button class="add-button" onclick="addClass()">Add Class</button>
-        </div>
-        
-        <table class="classes-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Grade Level</th>
-              <th>Section</th>
-              <th>Description</th>
-              <th>School Year</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="classesTableBody">
-            <!-- Data will be populated here -->
-          </tbody>
-        </table>
-      </div>
-
-      <script>
-        // Fetch and display classes data
-        async function fetchClasses() {
-          try {
-            const response = await fetch('/api/classes');
-            if (!response.ok) {
-              throw new Error('Failed to fetch classes');
-            }
-            const classes = await response.json();
-            
-            const tableBody = document.getElementById('classesTableBody');
-            tableBody.innerHTML = classes.map(classItem => 
-              '<tr>' +
-                '<td>' + (classItem.class_id || '') + '</td>' +
-                '<td><span class="grade-badge">Grade ' + (classItem.grade_level || '') + '</span></td>' +
-                '<td><span class="section-badge">Section ' + (classItem.section || '') + '</span></td>' +
-                '<td>' + (classItem.class_description || '-') + '</td>' +
-                '<td>' + (classItem.school_year || '') + '</td>' +
-                '<td class="action-buttons">' +
-                  '<button class="edit-button" onclick="editClass(' + classItem.class_id + ')">Edit</button>' +
-                  '<button class="delete-button" onclick="deleteClass(' + classItem.class_id + ')">Delete</button>' +
-                '</td>' +
-              '</tr>'
-            ).join('');
-          } catch (error) {
-            console.error('Error fetching classes:', error);
-            document.getElementById('classesTableBody').innerHTML = 
-              '<tr><td colspan="6" style="text-align: center; color: #dc2626;">Failed to load classes data. Please try again later.</td></tr>';
-          }
-        }
-
-        function addClass() {
-          // Implement add class functionality
-          alert('Add class functionality will be implemented');
-        }
-
-        function editClass(id) {
-          // Implement edit class functionality
-          alert('Edit class functionality will be implemented for ID: ' + id);
-        }
-
-        async function deleteClass(id) {
-          if (confirm('Are you sure you want to delete this class?')) {
-            try {
-              const response = await fetch('/api/classes/' + id, {
-                method: 'DELETE'
-              });
-              
-              if (!response.ok) {
-                throw new Error('Failed to delete class');
-              }
-              
-              // Refresh the table after successful deletion
-              fetchClasses();
-            } catch (error) {
-              console.error('Error deleting class:', error);
-              alert('Failed to delete class. Please try again.');
-            }
-          }
-        }
-
-        // Load classes when the page loads
-        window.addEventListener('load', fetchClasses);
-      </script>
-    </body>
-    </html>
-  `);
-});
-
-// Subjects page route
-app.get('/subjects', (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Subjects - School Management Database</title>
-      <style>
-        * {
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }
-
-        body {
-          background: #f8fafc;
-        }
-
-        .nav {
-          background: #3b82f6;
-          color: white;
-          padding: 1rem;
-          display: flex;
-          align-items: center;
-          gap: 2rem;
-        }
-
-        .nav-brand {
-          font-weight: bold;
-          font-size: 1.1rem;
-          color: white;
-          text-decoration: none;
-        }
-
-        .nav-links {
-          display: flex;
-          gap: 1.5rem;
-        }
-
-        .nav-link {
-          color: white;
-          text-decoration: none;
-          font-size: 0.9rem;
-        }
-
-        .container {
-          max-width: 1200px;
-          margin: 2rem auto;
-          padding: 0 1rem;
-        }
-
-        .header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 2rem;
-        }
-
-        .page-title {
-          font-size: 1.5rem;
-          font-weight: 600;
-          color: #1e293b;
-        }
-
-        .add-button {
-          background: #2563eb;
-          color: white;
-          border: none;
-          padding: 0.5rem 1rem;
-          border-radius: 0.375rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: background-color 0.2s;
-        }
-
-        .add-button:hover {
-          background: #1d4ed8;
-        }
-
-        .subjects-table {
-          width: 100%;
-          background: white;
-          border-radius: 0.5rem;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-          border-collapse: collapse;
-          overflow: hidden;
-        }
-
-        .subjects-table th,
-        .subjects-table td {
-          padding: 0.75rem 1rem;
-          text-align: left;
-          border-bottom: 1px solid #e2e8f0;
-        }
-
-        .subjects-table th {
-          background: #f8fafc;
-          font-weight: 600;
-          color: #475569;
-          font-size: 0.875rem;
-        }
-
-        .subjects-table tr:last-child td {
-          border-bottom: none;
-        }
-
-        .subjects-table tbody tr:hover {
-          background: #f8fafc;
-        }
-
-        .action-buttons {
-          display: flex;
-          gap: 0.5rem;
-        }
-
-        .edit-button,
-        .delete-button {
-          padding: 0.25rem 0.75rem;
-          border-radius: 0.25rem;
-          border: none;
-          font-size: 0.875rem;
-          cursor: pointer;
-          transition: background-color 0.2s;
-        }
-
-        .edit-button {
-          background: #3b82f6;
-          color: white;
-        }
-
-        .edit-button:hover {
-          background: #2563eb;
-        }
-
-        .delete-button {
-          background: #ef4444;
-          color: white;
-        }
-
-        .delete-button:hover {
-          background: #dc2626;
-        }
-
-        .subject-badge {
-          padding: 0.25rem 0.5rem;
-          border-radius: 0.25rem;
-          font-size: 0.875rem;
-          font-weight: 500;
-          background: #fef3c7;
-          color: #92400e;
-        }
-      </style>
-    </head>
-    <body>
-      <nav class="nav">
-        <a href="/" class="nav-brand">School Management Database</a>
-        <div class="nav-links">
-          <a href="/dashboard" class="nav-link">Dashboard</a>
-          <a href="/users" class="nav-link">Users</a>
-          <a href="/classes" class="nav-link">Classes</a>
-          <a href="/subjects" class="nav-link">Subjects</a>
-          <a href="/student-grade" class="nav-link">Student Grade</a>
-          <a href="/class-subject" class="nav-link">Class Subject</a>
-          <a href="/class-student" class="nav-link">Class Student</a>
-          <a href="/school-year" class="nav-link">School Year</a>
-        </div>
-      </nav>
-
-      <div class="container">
-        <div class="header">
-          <h1 class="page-title">Subjects Management</h1>
-          <button class="add-button" onclick="addSubject()">Add Subject</button>
-        </div>
-        
-        <table class="subjects-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Subject Name</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="subjectsTableBody">
-            <!-- Data will be populated here -->
-          </tbody>
-        </table>
-      </div>
-
-      <script>
-        // Fetch and display subjects data
-        async function fetchSubjects() {
-          try {
-            const response = await fetch('/api/subjects');
-            if (!response.ok) {
-              throw new Error('Failed to fetch subjects');
-            }
-            const subjects = await response.json();
-            
-            const tableBody = document.getElementById('subjectsTableBody');
-            tableBody.innerHTML = subjects.map(subject => 
-              '<tr>' +
-                '<td>' + (subject.subject_id || '') + '</td>' +
-                '<td><span class="subject-badge">' + (subject.subject_name || '') + '</span></td>' +
-                '<td class="action-buttons">' +
-                  '<button class="edit-button" onclick="editSubject(' + subject.subject_id + ')">Edit</button>' +
-                  '<button class="delete-button" onclick="deleteSubject(' + subject.subject_id + ')">Delete</button>' +
-                '</td>' +
-              '</tr>'
-            ).join('');
-          } catch (error) {
-            console.error('Error fetching subjects:', error);
-            document.getElementById('subjectsTableBody').innerHTML = 
-              '<tr><td colspan="3" style="text-align: center; color: #dc2626;">Failed to load subjects data. Please try again later.</td></tr>';
-          }
-        }
-
-        function addSubject() {
-          // Implement add subject functionality
-          alert('Add subject functionality will be implemented');
-        }
-
-        function editSubject(id) {
-          // Implement edit subject functionality
-          alert('Edit subject functionality will be implemented for ID: ' + id);
-        }
-
-        async function deleteSubject(id) {
-          if (confirm('Are you sure you want to delete this subject?')) {
-            try {
-              const response = await fetch('/api/subjects/' + id, {
-                method: 'DELETE'
-              });
-              
-              if (!response.ok) {
-                throw new Error('Failed to delete subject');
-              }
-              
-              // Refresh the table after successful deletion
-              fetchSubjects();
-            } catch (error) {
-              console.error('Error deleting subject:', error);
-              alert('Failed to delete subject. Please try again.');
-            }
-          }
-        }
-
-        // Load subjects when the page loads
-        window.addEventListener('load', fetchSubjects);
-      </script>
-    </body>
-    </html>
-  `);
-});
-
-// Student Grade page route
-app.get('/student-grade', (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Student Grades - School Management Database</title>
-      <style>
-        * {
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }
-
-        body {
-          background: #f8fafc;
-        }
-
-        .nav {
-          background: #3b82f6;
-          color: white;
-          padding: 1rem;
-          display: flex;
-          align-items: center;
-          gap: 2rem;
-        }
-
-        .nav-brand {
-          font-weight: bold;
-          font-size: 1.1rem;
-          color: white;
-          text-decoration: none;
-        }
-
-        .nav-links {
-          display: flex;
-          gap: 1.5rem;
-        }
-
-        .nav-link {
-          color: white;
-          text-decoration: none;
-          font-size: 0.9rem;
-        }
-
-        .container {
-          max-width: 1200px;
-          margin: 2rem auto;
-          padding: 0 1rem;
-        }
-
-        .header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 2rem;
-        }
-
-        .page-title {
-          font-size: 1.5rem;
-          font-weight: 600;
-          color: #1e293b;
-        }
-
-        .add-button {
-          background: #2563eb;
-          color: white;
-          border: none;
-          padding: 0.5rem 1rem;
-          border-radius: 0.375rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: background-color 0.2s;
-        }
-
-        .add-button:hover {
-          background: #1d4ed8;
-        }
-
-        .grades-table {
-          width: 100%;
-          background: white;
-          border-radius: 0.5rem;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-          border-collapse: collapse;
-          overflow: hidden;
-        }
-
-        .grades-table th,
-        .grades-table td {
-          padding: 0.75rem 1rem;
-          text-align: left;
-          border-bottom: 1px solid #e2e8f0;
-        }
-
-        .grades-table th {
-          background: #f8fafc;
-          font-weight: 600;
-          color: #475569;
-          font-size: 0.875rem;
-        }
-
-        .grades-table tr:last-child td {
-          border-bottom: none;
-        }
-
-        .grades-table tbody tr:hover {
-          background: #f8fafc;
-        }
-
-        .action-buttons {
-          display: flex;
-          gap: 0.5rem;
-        }
-
-        .edit-button,
-        .delete-button {
-          padding: 0.25rem 0.75rem;
-          border-radius: 0.25rem;
-          border: none;
-          font-size: 0.875rem;
-          cursor: pointer;
-          transition: background-color 0.2s;
-        }
-
-        .edit-button {
-          background: #3b82f6;
-          color: white;
-        }
-
-        .edit-button:hover {
-          background: #2563eb;
-        }
-
-        .delete-button {
-          background: #ef4444;
-          color: white;
-        }
-
-        .delete-button:hover {
-          background: #dc2626;
-        }
-
-        .grade-badge {
-          padding: 0.25rem 0.5rem;
-          border-radius: 0.25rem;
-          font-size: 0.875rem;
-          font-weight: 500;
-        }
-
-        .grade-high {
-          background: #dcfce7;
-          color: #166534;
-        }
-
-        .grade-medium {
-          background: #fef3c7;
-          color: #92400e;
-        }
-
-        .grade-low {
-          background: #fee2e2;
-          color: #991b1b;
-        }
-
-        .quarter-badge {
-          padding: 0.25rem 0.5rem;
-          border-radius: 0.25rem;
-          font-size: 0.875rem;
-          font-weight: 500;
-          background: #e0f2fe;
-          color: #0369a1;
-        }
-      </style>
-    </head>
-    <body>
-      <nav class="nav">
-        <a href="/" class="nav-brand">School Management Database</a>
-        <div class="nav-links">
-          <a href="/dashboard" class="nav-link">Dashboard</a>
-          <a href="/users" class="nav-link">Users</a>
-          <a href="/classes" class="nav-link">Classes</a>
-          <a href="/subjects" class="nav-link">Subjects</a>
-          <a href="/student-grade" class="nav-link">Student Grade</a>
-          <a href="/class-subject" class="nav-link">Class Subject</a>
-          <a href="/class-student" class="nav-link">Class Student</a>
-          <a href="/school-year" class="nav-link">School Year</a>
-        </div>
-      </nav>
-
-      <div class="container">
-        <div class="header">
-          <h1 class="page-title">Student Grades Management</h1>
-          <button class="add-button" onclick="addGrade()">Add Grade</button>
-        </div>
-        
-        <table class="grades-table">
-          <thead>
-            <tr>
-              <th>Student</th>
-              <th>Class</th>
-              <th>Subject</th>
-              <th>Teacher</th>
-              <th>Quarter</th>
-              <th>Grade</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="gradesTableBody">
-            <!-- Data will be populated here -->
-          </tbody>
-        </table>
-      </div>
-
-      <script>
-        // Fetch and display grades data
-        async function fetchGrades() {
-          try {
-            const response = await fetch('/api/student-grades');
-            if (!response.ok) {
-              throw new Error('Failed to fetch grades');
-            }
-            const grades = await response.json();
-            
-            const tableBody = document.getElementById('gradesTableBody');
-            tableBody.innerHTML = grades.map(grade => {
-              let gradeClass = 'grade-medium';
-              if (grade.grade >= 90) gradeClass = 'grade-high';
-              else if (grade.grade < 75) gradeClass = 'grade-low';
-              
-              return '<tr>' +
-                '<td>' + (grade.student_name || '') + '</td>' +
-                '<td>' + (grade.class_name || '') + '</td>' +
-                '<td>' + (grade.subject_name || '') + '</td>' +
-                '<td>' + (grade.teacher_name || '') + '</td>' +
-                '<td><span class="quarter-badge">Q' + (grade.quarter || '') + '</span></td>' +
-                '<td><span class="grade-badge ' + gradeClass + '">' + (grade.grade || '') + '</span></td>' +
-                '<td class="action-buttons">' +
-                  '<button class="edit-button" onclick="editGrade(' + grade.student_id + ', ' + grade.class_id + ', ' + grade.subject_id + ', ' + grade.quarter + ')">Edit</button>' +
-                  '<button class="delete-button" onclick="deleteGrade(' + grade.student_id + ', ' + grade.class_id + ', ' + grade.subject_id + ', ' + grade.quarter + ')">Delete</button>' +
-                '</td>' +
-              '</tr>';
-            }).join('');
-          } catch (error) {
-            console.error('Error fetching grades:', error);
-            document.getElementById('gradesTableBody').innerHTML = 
-              '<tr><td colspan="7" style="text-align: center; color: #dc2626;">Failed to load grades data. Please try again later.</td></tr>';
-          }
-        }
-
-        function addGrade() {
-          // Implement add grade functionality
-          alert('Add grade functionality will be implemented');
-        }
-
-        function editGrade(studentId, classId, subjectId, quarter) {
-          // Implement edit grade functionality
-          alert('Edit grade functionality will be implemented for Student ID: ' + studentId);
-        }
-
-        async function deleteGrade(studentId, classId, subjectId, quarter) {
-          if (confirm('Are you sure you want to delete this grade?')) {
-            try {
-              const response = await fetch(\`/api/student-grades/\${studentId}/\${classId}/\${subjectId}/\${quarter}\`, {
-                method: 'DELETE'
-              });
-              
-              if (!response.ok) {
-                throw new Error('Failed to delete grade');
-              }
-              
-              // Refresh the table after successful deletion
-              fetchGrades();
-            } catch (error) {
-              console.error('Error deleting grade:', error);
-              alert('Failed to delete grade. Please try again.');
-            }
-          }
-        }
-
-        // Load grades when the page loads
-        window.addEventListener('load', fetchGrades);
-      </script>
-    </body>
-    </html>
-  `);
-});
-
-// Create a more robust server startup
-const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
-}).on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    console.error(`❌ Port ${PORT} is already in use. Please try a different port.`);
-  } else {
-    console.error('❌ Server error:', err);
-  }
-  process.exit(1);
-});
-
-// Add error handling for uncaught exceptions
-process.on('uncaughtException', (err) => {
-  console.error('❌ Uncaught Exception:', err);
-  server.close(() => {
-    process.exit(1);
-  });
-});
-
-// Add error handling for unhandled promise rejections
-process.on('unhandledRejection', (err) => {
-  console.error('❌ Unhandled Promise Rejection:', err);
-  server.close(() => {
-    process.exit(1);
-  });
-});
-
-// Add error handling for database connection
-pool.on('error', (err) => {
-  console.error('❌ Unexpected database error:', err);
-  if (err.code === 'PROTOCOL_CONNECTION_LOST') {
-    console.error('Database connection was closed.');
-  }
-  if (err.code === 'ER_CON_COUNT_ERROR') {
-    console.error('Database has too many connections.');
-  }
-  if (err.code === 'ECONNREFUSED') {
-    console.error('Database connection was refused.');
-  }
-}); 
-
-// GET endpoint to fetch all student grades with related information
-app.get('/api/student-grades', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT 
-        sg.student_id,
-        sg.class_id,
-        sg.subject_id,
-        CONCAT(s.fname, ' ', s.lname) as student_name,
-        CONCAT('Grade ', c.grade_level, '-', c.section) as class_name,
-        sub.subject_name,
-        CONCAT(t.fname, ' ', t.lname) as teacher_name,
-        sg.quarter,
-        sg.grade
-      FROM student_grade sg
-      JOIN users s ON sg.student_id = s.user_id
-      JOIN class c ON sg.class_id = c.class_id
-      JOIN subject sub ON sg.subject_id = sub.subject_id
-      JOIN users t ON sg.teacher_id = t.user_id
-      ORDER BY s.lname, s.fname, sub.subject_name, sg.quarter
-    `);
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching student grades:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Class Subject page route
-app.get('/class-subject', (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Class Subjects - School Management Database</title>
-      <style>
-        * {
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }
-
-        body {
-          background: #f8fafc;
-        }
-
-        .nav {
-          background: #3b82f6;
-          color: white;
-          padding: 1rem;
-          display: flex;
-          align-items: center;
-          gap: 2rem;
-        }
-
-        .nav-brand {
-          font-weight: bold;
-          font-size: 1.1rem;
-          color: white;
-          text-decoration: none;
-        }
-
-        .nav-links {
-          display: flex;
-          gap: 1.5rem;
-        }
-
-        .nav-link {
-          color: white;
-          text-decoration: none;
-          font-size: 0.9rem;
-        }
-
-        .container {
-          max-width: 1200px;
-          margin: 2rem auto;
-          padding: 0 1rem;
-        }
-
-        .header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 2rem;
-        }
-
-        .page-title {
-          font-size: 1.5rem;
-          font-weight: 600;
-          color: #1e293b;
-        }
-
-        .add-button {
-          background: #2563eb;
-          color: white;
-          border: none;
-          padding: 0.5rem 1rem;
-          border-radius: 0.375rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: background-color 0.2s;
-        }
-
-        .add-button:hover {
-          background: #1d4ed8;
-        }
-
-        .table {
-          width: 100%;
-          background: white;
-          border-radius: 0.5rem;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-          border-collapse: collapse;
-          overflow: hidden;
-        }
-
-        .table th,
-        .table td {
-          padding: 0.75rem 1rem;
-          text-align: left;
-          border-bottom: 1px solid #e2e8f0;
-        }
-
-        .table th {
-          background: #f8fafc;
-          font-weight: 600;
-          color: #475569;
-          font-size: 0.875rem;
-        }
-
-        .table tr:last-child td {
-          border-bottom: none;
-        }
-
-        .table tbody tr:hover {
-          background: #f8fafc;
-        }
-
-        .action-buttons {
-          display: flex;
-          gap: 0.5rem;
-        }
-
-        .edit-button,
-        .delete-button {
-          padding: 0.25rem 0.75rem;
-          border-radius: 0.25rem;
-          border: none;
-          font-size: 0.875rem;
-          cursor: pointer;
-          transition: background-color 0.2s;
-        }
-
-        .edit-button {
-          background: #3b82f6;
-          color: white;
-        }
-
-        .edit-button:hover {
-          background: #2563eb;
-        }
-
-        .delete-button {
-          background: #ef4444;
-          color: white;
-        }
-
-        .delete-button:hover {
-          background: #dc2626;
-        }
-
-        .badge {
-          padding: 0.25rem 0.5rem;
-          border-radius: 0.25rem;
-          font-size: 0.875rem;
-          font-weight: 500;
-        }
-
-        .class-badge {
-          background: #e0f2fe;
-          color: #0369a1;
-        }
-
-        .subject-badge {
-          background: #fef3c7;
-          color: #92400e;
-        }
-
-        .teacher-badge {
-          background: #dcfce7;
-          color: #166534;
-        }
-      </style>
-    </head>
-    <body>
-      <nav class="nav">
-        <a href="/" class="nav-brand">School Management Database</a>
-        <div class="nav-links">
-          <a href="/dashboard" class="nav-link">Dashboard</a>
-          <a href="/users" class="nav-link">Users</a>
-          <a href="/classes" class="nav-link">Classes</a>
-          <a href="/subjects" class="nav-link">Subjects</a>
-          <a href="/student-grade" class="nav-link">Student Grade</a>
-          <a href="/class-subject" class="nav-link">Class Subject</a>
-          <a href="/class-student" class="nav-link">Class Student</a>
-          <a href="/school-year" class="nav-link">School Year</a>
-        </div>
-      </nav>
-
-      <div class="container">
-        <div class="header">
-          <h1 class="page-title">Class Subject Management</h1>
-          <button class="add-button" onclick="addClassSubject()">Add Class Subject</button>
-        </div>
-        
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Class</th>
-              <th>Subject</th>
-              <th>Teacher</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="classSubjectTableBody">
-            <!-- Data will be populated here -->
-          </tbody>
-        </table>
-      </div>
-
-      <script>
-        async function fetchClassSubjects() {
-          try {
-            const response = await fetch('/api/class-subjects');
-            if (!response.ok) {
-              throw new Error('Failed to fetch class subjects');
-            }
-            const classSubjects = await response.json();
-            
-            const tableBody = document.getElementById('classSubjectTableBody');
-            tableBody.innerHTML = classSubjects.map(cs => 
-              '<tr>' +
-                '<td><span class="badge class-badge">Grade ' + cs.grade_level + '-' + cs.section + '</span></td>' +
-                '<td><span class="badge subject-badge">' + cs.subject_name + '</span></td>' +
-                '<td><span class="badge teacher-badge">' + cs.teacher_name + '</span></td>' +
-                '<td class="action-buttons">' +
-                  '<button class="edit-button" onclick="editClassSubject(' + cs.class_id + ', ' + cs.subject_id + ', ' + cs.teacher_id + ')">Edit</button>' +
-                  '<button class="delete-button" onclick="deleteClassSubject(' + cs.class_id + ', ' + cs.subject_id + ', ' + cs.teacher_id + ')">Delete</button>' +
-                '</td>' +
-              '</tr>'
-            ).join('');
-          } catch (error) {
-            console.error('Error fetching class subjects:', error);
-            document.getElementById('classSubjectTableBody').innerHTML = 
-              '<tr><td colspan="4" style="text-align: center; color: #dc2626;">Failed to load class subjects data. Please try again later.</td></tr>';
-          }
-        }
-
-        function addClassSubject() {
-          alert('Add class subject functionality will be implemented');
-        }
-
-        function editClassSubject(classId, subjectId, teacherId) {
-          alert('Edit class subject functionality will be implemented');
-        }
-
-        async function deleteClassSubject(classId, subjectId, teacherId) {
-          if (confirm('Are you sure you want to delete this class subject assignment?')) {
-            try {
-              const response = await fetch(\`/api/class-subjects/\${classId}/\${subjectId}/\${teacherId}\`, {
-                method: 'DELETE'
-              });
-              
-              if (!response.ok) {
-                throw new Error('Failed to delete class subject');
-              }
-              
-              fetchClassSubjects();
-            } catch (error) {
-              console.error('Error deleting class subject:', error);
-              alert('Failed to delete class subject. Please try again.');
-            }
-          }
-        }
-
-        window.addEventListener('load', fetchClassSubjects);
-      </script>
-    </body>
-    </html>
-  `);
-});
-
-// Class Student page route
-app.get('/class-student', (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Class Students - School Management Database</title>
-      <style>
-        * {
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }
-
-        body {
-          background: #f8fafc;
-        }
-
-        .nav {
-          background: #3b82f6;
-          color: white;
-          padding: 1rem;
-          display: flex;
-          align-items: center;
-          gap: 2rem;
-        }
-
-        .nav-brand {
-          font-weight: bold;
-          font-size: 1.1rem;
-          color: white;
-          text-decoration: none;
-        }
-
-        .nav-links {
-          display: flex;
-          gap: 1.5rem;
-        }
-
-        .nav-link {
-          color: white;
-          text-decoration: none;
-          font-size: 0.9rem;
-        }
-
-        .container {
-          max-width: 1200px;
-          margin: 2rem auto;
-          padding: 0 1rem;
-        }
-
-        .header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 2rem;
-        }
-
-        .page-title {
-          font-size: 1.5rem;
-          font-weight: 600;
-          color: #1e293b;
-        }
-
-        .add-button {
-          background: #2563eb;
-          color: white;
-          border: none;
-          padding: 0.5rem 1rem;
-          border-radius: 0.375rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: background-color 0.2s;
-        }
-
-        .add-button:hover {
-          background: #1d4ed8;
-        }
-
-        .table {
-          width: 100%;
-          background: white;
-          border-radius: 0.5rem;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-          border-collapse: collapse;
-          overflow: hidden;
-        }
-
-        .table th,
-        .table td {
-          padding: 0.75rem 1rem;
-          text-align: left;
-          border-bottom: 1px solid #e2e8f0;
-        }
-
-        .table th {
-          background: #f8fafc;
-          font-weight: 600;
-          color: #475569;
-          font-size: 0.875rem;
-        }
-
-        .table tr:last-child td {
-          border-bottom: none;
-        }
-
-        .table tbody tr:hover {
-          background: #f8fafc;
-        }
-
-        .action-buttons {
-          display: flex;
-          gap: 0.5rem;
-        }
-
-        .edit-button,
-        .delete-button {
-          padding: 0.25rem 0.75rem;
-          border-radius: 0.25rem;
-          border: none;
-          font-size: 0.875rem;
-          cursor: pointer;
-          transition: background-color 0.2s;
-        }
-
-        .edit-button {
-          background: #3b82f6;
-          color: white;
-        }
-
-        .edit-button:hover {
-          background: #2563eb;
-        }
-
-        .delete-button {
-          background: #ef4444;
-          color: white;
-        }
-
-        .delete-button:hover {
-          background: #dc2626;
-        }
-
-        .badge {
-          padding: 0.25rem 0.5rem;
-          border-radius: 0.25rem;
-          font-size: 0.875rem;
-          font-weight: 500;
-        }
-
-        .class-badge {
-          background: #e0f2fe;
-          color: #0369a1;
-        }
-
-        .student-badge {
-          background: #fef9c3;
-          color: #854d0e;
-        }
-      </style>
-    </head>
-    <body>
-      <nav class="nav">
-        <a href="/" class="nav-brand">School Management Database</a>
-        <div class="nav-links">
-          <a href="/dashboard" class="nav-link">Dashboard</a>
-          <a href="/users" class="nav-link">Users</a>
-          <a href="/classes" class="nav-link">Classes</a>
-          <a href="/subjects" class="nav-link">Subjects</a>
-          <a href="/student-grade" class="nav-link">Student Grade</a>
-          <a href="/class-subject" class="nav-link">Class Subject</a>
-          <a href="/class-student" class="nav-link">Class Student</a>
-          <a href="/school-year" class="nav-link">School Year</a>
-        </div>
-      </nav>
-
-      <div class="container">
-        <div class="header">
-          <h1 class="page-title">Class Student Management</h1>
-          <button class="add-button" onclick="addClassStudent()">Add Class Student</button>
-        </div>
-        
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Class</th>
-              <th>Student</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="classStudentTableBody">
-            <!-- Data will be populated here -->
-          </tbody>
-        </table>
-      </div>
-
-      <script>
-        async function fetchClassStudents() {
-          try {
-            const response = await fetch('/api/class-students');
-            if (!response.ok) {
-              throw new Error('Failed to fetch class students');
-            }
-            const classStudents = await response.json();
-            
-            const tableBody = document.getElementById('classStudentTableBody');
-            tableBody.innerHTML = classStudents.map(cs => 
-              '<tr>' +
-                '<td><span class="badge class-badge">Grade ' + cs.grade_level + '-' + cs.section + '</span></td>' +
-                '<td><span class="badge student-badge">' + cs.student_name + '</span></td>' +
-                '<td class="action-buttons">' +
-                  '<button class="edit-button" onclick="editClassStudent(' + cs.class_id + ', ' + cs.student_id + ')">Edit</button>' +
-                  '<button class="delete-button" onclick="deleteClassStudent(' + cs.class_id + ', ' + cs.student_id + ')">Delete</button>' +
-                '</td>' +
-              '</tr>'
-            ).join('');
-          } catch (error) {
-            console.error('Error fetching class students:', error);
-            document.getElementById('classStudentTableBody').innerHTML = 
-              '<tr><td colspan="3" style="text-align: center; color: #dc2626;">Failed to load class students data. Please try again later.</td></tr>';
-          }
-        }
-
-        function addClassStudent() {
-          alert('Add class student functionality will be implemented');
-        }
-
-        function editClassStudent(classId, studentId) {
-          alert('Edit class student functionality will be implemented');
-        }
-
-        async function deleteClassStudent(classId, studentId) {
-          if (confirm('Are you sure you want to delete this class student assignment?')) {
-            try {
-              const response = await fetch(\`/api/class-students/\${classId}/\${studentId}\`, {
-                method: 'DELETE'
-              });
-              
-              if (!response.ok) {
-                throw new Error('Failed to delete class student');
-              }
-              
-              fetchClassStudents();
-            } catch (error) {
-              console.error('Error deleting class student:', error);
-              alert('Failed to delete class student. Please try again.');
-            }
-          }
-        }
-
-        window.addEventListener('load', fetchClassStudents);
-      </script>
-    </body>
-    </html>
-  `);
-});
-
-// API endpoint for class subjects
-app.get('/api/class-subjects', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT 
-        cs.class_id,
-        cs.subject_id,
-        cs.teacher_id,
-        c.grade_level,
-        c.section,
-        s.subject_name,
-        CONCAT(u.fname, ' ', u.lname) as teacher_name
-      FROM class_subject cs
-      JOIN class c ON cs.class_id = c.class_id
-      JOIN subject s ON cs.subject_id = s.subject_id
-      JOIN users u ON cs.teacher_id = u.user_id
-      ORDER BY c.grade_level, c.section, s.subject_name
-    `);
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching class subjects:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// API endpoint for class students
-app.get('/api/class-students', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT 
-        cs.class_id,
-        cs.student_id,
-        c.grade_level,
-        c.section,
-        CONCAT(u.fname, ' ', u.lname) as student_name
-      FROM class_student cs
-      JOIN class c ON cs.class_id = c.class_id
-      JOIN users u ON cs.student_id = u.user_id
-      ORDER BY c.grade_level, c.section, u.lname, u.fname
-    `);
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching class students:', error);
-    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

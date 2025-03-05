@@ -1915,27 +1915,6 @@ app.get('/dashboard', async (req, res) => {
         </div>
       </nav>
 
-      <div class="container">
-        <h1 class="dashboard-title">Dashboard</h1>
-        
-        <div class="stats-grid">
-          <div class="stat-card students">
-            <div class="stat-number">${studentCount.rows[0].count}</div>
-            <div class="stat-label">Students</div>
-          </div>
-          <div class="stat-card teachers">
-            <div class="stat-number">${teacherCount.rows[0].count}</div>
-            <div class="stat-label">Teachers</div>
-          </div>
-          <div class="stat-card classes">
-            <div class="stat-number">${classCount.rows[0].count}</div>
-            <div class="stat-label">Classes</div>
-          </div>
-          <div class="stat-card subjects">
-            <div class="stat-number">${subjectCount.rows[0].count}</div>
-            <div class="stat-label">Subjects</div>
-          </div>
-        </div>
       </div>
     </body>
     </html>

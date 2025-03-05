@@ -11,7 +11,8 @@ CREATE TABLE users (
     lname VARCHAR(50),
     gender VARCHAR(1),
     teacher_status BOOLEAN,
-    firebase_uid VARCHAR(128)
+    firebase_uid VARCHAR(128),
+    age INTEGER -- Added for student information
 );
 
 -- School Year Table
@@ -38,12 +39,13 @@ CREATE TABLE class (
 
 -- Student Grade Table
 CREATE TABLE student_grade (
-    student_id INTEGER,
-    class_id INTEGER,
-    subject_id INTEGER,
-    teacher_id INTEGER,
-    quarter INTEGER,
-    grade NUMERIC(5,2)
+    user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+    class_id INTEGER REFERENCES class(class_id) ON DELETE CASCADE,
+    subject_id INTEGER REFERENCES subject(subject_id) ON DELETE CASCADE,
+    teacher_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+    quarter INTEGER CHECK (quarter BETWEEN 1 AND 4),
+    grade NUMERIC(5,2) CHECK (grade BETWEEN 0 AND 100),
+    PRIMARY KEY (user_id, class_id, subject_id, quarter)
 );
 
 -- Class-Student Table
@@ -61,13 +63,13 @@ CREATE TABLE class_subject (
     PRIMARY KEY (class_id, subject_id, teacher_id)
 );
 
--- Insert Users
-INSERT INTO users (email, user_type, fname, mname, lname, gender, teacher_status, firebase_uid) VALUES
-('admin@school.com', 'Admin', 'Admin', NULL, 'User', 'M', FALSE, 'admin123'),
-('john.doe@school.com', 'Teacher', 'John', 'A.', 'Doe', 'M', TRUE, 'teacher123'),
-('jane.doe@school.com', 'Teacher', 'Jane', 'B.', 'Doe', 'F', TRUE, 'teacher456'),
-('alice.j@school.com', 'Student', 'Alice', 'M.', 'Johnson', 'F', FALSE, 'student123'),
-('bob.s@school.com', 'Student', 'Bob', 'L.', 'Smith', 'M', FALSE, 'student456');
+-- Insert Users (Including both teachers and students)
+INSERT INTO users (email, user_type, fname, mname, lname, gender, teacher_status, firebase_uid, age) VALUES
+('admin@school.com', 'Admin', 'Admin', NULL, 'User', 'M', FALSE, 'admin123', NULL),
+('john.doe@school.com', 'Teacher', 'John', 'A.', 'Doe', 'M', TRUE, 'teacher123', NULL),
+('jane.doe@school.com', 'Teacher', 'Jane', 'B.', 'Doe', 'F', TRUE, 'teacher456', NULL),
+('alice.j@school.com', 'Student', 'Alice', 'M.', 'Johnson', 'F', FALSE, 'student123', 12),
+('bob.s@school.com', 'Student', 'Bob', 'L.', 'Smith', 'M', FALSE, 'student456', 13);
 
 -- Insert School Years
 INSERT INTO school_year (school_year, is_active) VALUES
@@ -87,8 +89,8 @@ INSERT INTO class (grade_level, section, class_description, school_year) VALUES
 ('5', 'A', 'Regular Class', '2023-2024'),
 ('6', 'B', 'Advanced Class', '2023-2024');
 
--- Insert Student Grades
-INSERT INTO student_grade (student_id, class_id, subject_id, teacher_id, quarter, grade) VALUES
+-- Insert Student Grades (using user_id instead of student_id)
+INSERT INTO student_grade (user_id, class_id, subject_id, teacher_id, quarter, grade) VALUES
 (4, 1, 1, 2, 1, 85.50),  -- Alice, Class 5-A, Mathematics, John Doe, Q1
 (4, 1, 2, 2, 1, 88.75),  -- Alice, Class 5-A, Science, John Doe, Q1
 (5, 2, 1, 2, 1, 90.00),  -- Bob, Class 6-B, Mathematics, John Doe, Q1

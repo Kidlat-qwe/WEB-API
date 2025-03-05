@@ -52,8 +52,6 @@ const initDatabase = async () => {
       'student_grade',
       'class_student',
       'class_subject',
-      'student',
-      'teacher',
       'subject',
       'class',
       'school_year',
@@ -117,7 +115,7 @@ const initDatabase = async () => {
 
     // Verify the data
     console.log('\n🔍 Verifying database tables:');
-    const tables = ['users', 'school_year', 'student', 'teacher', 'subject', 'class', 'student_grade', 'class_student', 'class_subject'];
+    const tables = ['users', 'school_year', 'subject', 'class', 'student_grade', 'class_student', 'class_subject'];
     
     for (const table of tables) {
       try {
@@ -271,65 +269,23 @@ app.get('/api/teachers', async (req, res) => {
   try {
     console.log('Fetching all teachers from database...');
     
-    // First check if we can connect to the database
-    const testConnection = await pool.query('SELECT NOW()');
-    console.log('Database connection test successful:', testConnection.rows[0].now);
-    
-    // Then check if the teacher table exists
-    const tableCheck = await pool.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = 'teacher'
-      )`
-    );
-    
-    if (!tableCheck.rows[0].exists) {
-      console.error('Teacher table does not exist in the public schema');
-      return res.status(500).json({ 
-        error: 'Database table not found',
-        details: 'The teacher table does not exist in the public schema' 
-      });
-    }
-
-    console.log('Teacher table exists, fetching data...');
-    
     const result = await pool.query(`
       SELECT 
-        teacher_id,
+        user_id as teacher_id,
         fname,
         mname,
         lname,
         gender,
-        status
-      FROM teacher 
+        teacher_status as status
+      FROM users 
+      WHERE user_type = 'Teacher'
       ORDER BY lname, fname
     `);
     
-    console.log(`Found ${result.rows.length} teachers`);
-    
-    if (!result.rows || !Array.isArray(result.rows)) {
-      console.error('Invalid data format from database:', result.rows);
-      return res.status(500).json({
-        error: 'Invalid data format',
-        details: 'Database returned unexpected data format'
-      });
-    }
-    
     res.json(result.rows);
   } catch (error) {
-    console.error('Detailed error in /api/teachers:', {
-      message: error.message,
-      stack: error.stack,
-      code: error.code,
-      detail: error.detail
-    });
-    
-    res.status(500).json({ 
-      error: 'Internal server error',
-      details: error.message,
-      code: error.code
-    });
+    console.error('Error fetching teachers:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -570,65 +526,23 @@ app.get('/api/students', async (req, res) => {
   try {
     console.log('Fetching all students from database...');
     
-    // First check if we can connect to the database
-    const testConnection = await pool.query('SELECT NOW()');
-    console.log('Database connection test successful:', testConnection.rows[0].now);
-    
-    // Then check if the student table exists
-    const tableCheck = await pool.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = 'student'
-      )`
-    );
-    
-    if (!tableCheck.rows[0].exists) {
-      console.error('Student table does not exist in the public schema');
-      return res.status(500).json({ 
-        error: 'Database table not found',
-        details: 'The student table does not exist in the public schema' 
-      });
-    }
-
-    console.log('Student table exists, fetching data...');
-    
     const result = await pool.query(`
       SELECT 
-        student_id,
+        user_id as student_id,
         fname,
         mname,
         lname,
         gender,
         age
-      FROM student 
+      FROM users 
+      WHERE user_type = 'Student'
       ORDER BY lname, fname
     `);
     
-    console.log(`Found ${result.rows.length} students`);
-    
-    if (!result.rows || !Array.isArray(result.rows)) {
-      console.error('Invalid data format from database:', result.rows);
-      return res.status(500).json({
-        error: 'Invalid data format',
-        details: 'Database returned unexpected data format'
-      });
-    }
-    
     res.json(result.rows);
   } catch (error) {
-    console.error('Detailed error in /api/students:', {
-      message: error.message,
-      stack: error.stack,
-      code: error.code,
-      detail: error.detail
-    });
-    
-    res.status(500).json({ 
-      error: 'Internal server error',
-      details: error.message,
-      code: error.code
-    });
+    console.error('Error fetching students:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

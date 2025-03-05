@@ -3378,3 +3378,287 @@ app.get('/api/class-students', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// School Year page route
+app.get('/school-year', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>School Years - School Management Database</title>
+      <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+          background: #f8fafc;
+        }
+
+        .nav {
+          background: #3b82f6;
+          color: white;
+          padding: 1rem;
+          display: flex;
+          align-items: center;
+          gap: 2rem;
+        }
+
+        .nav-brand {
+          font-weight: bold;
+          font-size: 1.1rem;
+          color: white;
+          text-decoration: none;
+        }
+
+        .nav-links {
+          display: flex;
+          gap: 1.5rem;
+        }
+
+        .nav-link {
+          color: white;
+          text-decoration: none;
+          font-size: 0.9rem;
+        }
+
+        .container {
+          max-width: 1200px;
+          margin: 2rem auto;
+          padding: 0 1rem;
+        }
+
+        .header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 2rem;
+        }
+
+        .page-title {
+          font-size: 1.5rem;
+          font-weight: 600;
+          color: #1e293b;
+        }
+
+        .add-button {
+          background: #2563eb;
+          color: white;
+          border: none;
+          padding: 0.5rem 1rem;
+          border-radius: 0.375rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+
+        .add-button:hover {
+          background: #1d4ed8;
+        }
+
+        .table {
+          width: 100%;
+          background: white;
+          border-radius: 0.5rem;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          border-collapse: collapse;
+          overflow: hidden;
+        }
+
+        .table th,
+        .table td {
+          padding: 0.75rem 1rem;
+          text-align: left;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .table th {
+          background: #f8fafc;
+          font-weight: 600;
+          color: #475569;
+          font-size: 0.875rem;
+        }
+
+        .table tr:last-child td {
+          border-bottom: none;
+        }
+
+        .table tbody tr:hover {
+          background: #f8fafc;
+        }
+
+        .action-buttons {
+          display: flex;
+          gap: 0.5rem;
+        }
+
+        .edit-button,
+        .delete-button {
+          padding: 0.25rem 0.75rem;
+          border-radius: 0.25rem;
+          border: none;
+          font-size: 0.875rem;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+
+        .edit-button {
+          background: #3b82f6;
+          color: white;
+        }
+
+        .edit-button:hover {
+          background: #2563eb;
+        }
+
+        .delete-button {
+          background: #ef4444;
+          color: white;
+        }
+
+        .delete-button:hover {
+          background: #dc2626;
+        }
+
+        .badge {
+          padding: 0.25rem 0.5rem;
+          border-radius: 0.25rem;
+          font-size: 0.875rem;
+          font-weight: 500;
+        }
+
+        .status-active {
+          background: #dcfce7;
+          color: #166534;
+        }
+
+        .status-inactive {
+          background: #fee2e2;
+          color: #991b1b;
+        }
+
+        .year-badge {
+          background: #e0f2fe;
+          color: #0369a1;
+        }
+      </style>
+    </head>
+    <body>
+      <nav class="nav">
+        <a href="/" class="nav-brand">School Management Database</a>
+        <div class="nav-links">
+          <a href="/dashboard" class="nav-link">Dashboard</a>
+          <a href="/users" class="nav-link">Users</a>
+          <a href="/classes" class="nav-link">Classes</a>
+          <a href="/subjects" class="nav-link">Subjects</a>
+          <a href="/student-grade" class="nav-link">Student Grade</a>
+          <a href="/class-subject" class="nav-link">Class Subject</a>
+          <a href="/class-student" class="nav-link">Class Student</a>
+          <a href="/school-year" class="nav-link">School Year</a>
+        </div>
+      </nav>
+
+      <div class="container">
+        <div class="header">
+          <h1 class="page-title">School Year Management</h1>
+          <button class="add-button" onclick="addSchoolYear()">Add School Year</button>
+        </div>
+        
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>School Year</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="schoolYearTableBody">
+            <!-- Data will be populated here -->
+          </tbody>
+        </table>
+      </div>
+
+      <script>
+        async function fetchSchoolYears() {
+          try {
+            const response = await fetch('/api/school-years');
+            if (!response.ok) {
+              throw new Error('Failed to fetch school years');
+            }
+            const schoolYears = await response.json();
+            
+            const tableBody = document.getElementById('schoolYearTableBody');
+            tableBody.innerHTML = schoolYears.map(sy => 
+              '<tr>' +
+                '<td>' + sy.school_year_id + '</td>' +
+                '<td><span class="badge year-badge">' + sy.school_year + '</span></td>' +
+                '<td><span class="badge status-' + (sy.is_active ? 'active' : 'inactive') + '">' + 
+                  (sy.is_active ? 'Active' : 'Inactive') + '</span></td>' +
+                '<td class="action-buttons">' +
+                  '<button class="edit-button" onclick="editSchoolYear(' + sy.school_year_id + ')">Edit</button>' +
+                  '<button class="delete-button" onclick="deleteSchoolYear(' + sy.school_year_id + ')">Delete</button>' +
+                '</td>' +
+              '</tr>'
+            ).join('');
+          } catch (error) {
+            console.error('Error fetching school years:', error);
+            document.getElementById('schoolYearTableBody').innerHTML = 
+              '<tr><td colspan="4" style="text-align: center; color: #dc2626;">Failed to load school years data. Please try again later.</td></tr>';
+          }
+        }
+
+        function addSchoolYear() {
+          alert('Add school year functionality will be implemented');
+        }
+
+        function editSchoolYear(id) {
+          alert('Edit school year functionality will be implemented');
+        }
+
+        async function deleteSchoolYear(id) {
+          if (confirm('Are you sure you want to delete this school year?')) {
+            try {
+              const response = await fetch(\`/api/school-years/\${id}\`, {
+                method: 'DELETE'
+              });
+              
+              if (!response.ok) {
+                throw new Error('Failed to delete school year');
+              }
+              
+              fetchSchoolYears();
+            } catch (error) {
+              console.error('Error deleting school year:', error);
+              alert('Failed to delete school year. Please try again.');
+            }
+          }
+        }
+
+        window.addEventListener('load', fetchSchoolYears);
+      </script>
+    </body>
+    </html>
+  `);
+});
+
+// API endpoint for school years
+app.get('/api/school-years', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        school_year_id,
+        school_year,
+        is_active
+      FROM school_year
+      ORDER BY school_year DESC
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching school years:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});

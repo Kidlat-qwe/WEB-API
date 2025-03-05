@@ -2195,6 +2195,550 @@ app.get('/classes', (req, res) => {
   `);
 });
 
+// Subjects page route
+app.get('/subjects', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Subjects - School Management Database</title>
+      <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+          background: #f8fafc;
+        }
+
+        .nav {
+          background: #3b82f6;
+          color: white;
+          padding: 1rem;
+          display: flex;
+          align-items: center;
+          gap: 2rem;
+        }
+
+        .nav-brand {
+          font-weight: bold;
+          font-size: 1.1rem;
+          color: white;
+          text-decoration: none;
+        }
+
+        .nav-links {
+          display: flex;
+          gap: 1.5rem;
+        }
+
+        .nav-link {
+          color: white;
+          text-decoration: none;
+          font-size: 0.9rem;
+        }
+
+        .container {
+          max-width: 1200px;
+          margin: 2rem auto;
+          padding: 0 1rem;
+        }
+
+        .header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 2rem;
+        }
+
+        .page-title {
+          font-size: 1.5rem;
+          font-weight: 600;
+          color: #1e293b;
+        }
+
+        .add-button {
+          background: #2563eb;
+          color: white;
+          border: none;
+          padding: 0.5rem 1rem;
+          border-radius: 0.375rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+
+        .add-button:hover {
+          background: #1d4ed8;
+        }
+
+        .subjects-table {
+          width: 100%;
+          background: white;
+          border-radius: 0.5rem;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          border-collapse: collapse;
+          overflow: hidden;
+        }
+
+        .subjects-table th,
+        .subjects-table td {
+          padding: 0.75rem 1rem;
+          text-align: left;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .subjects-table th {
+          background: #f8fafc;
+          font-weight: 600;
+          color: #475569;
+          font-size: 0.875rem;
+        }
+
+        .subjects-table tr:last-child td {
+          border-bottom: none;
+        }
+
+        .subjects-table tbody tr:hover {
+          background: #f8fafc;
+        }
+
+        .action-buttons {
+          display: flex;
+          gap: 0.5rem;
+        }
+
+        .edit-button,
+        .delete-button {
+          padding: 0.25rem 0.75rem;
+          border-radius: 0.25rem;
+          border: none;
+          font-size: 0.875rem;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+
+        .edit-button {
+          background: #3b82f6;
+          color: white;
+        }
+
+        .edit-button:hover {
+          background: #2563eb;
+        }
+
+        .delete-button {
+          background: #ef4444;
+          color: white;
+        }
+
+        .delete-button:hover {
+          background: #dc2626;
+        }
+
+        .subject-badge {
+          padding: 0.25rem 0.5rem;
+          border-radius: 0.25rem;
+          font-size: 0.875rem;
+          font-weight: 500;
+          background: #fef3c7;
+          color: #92400e;
+        }
+      </style>
+    </head>
+    <body>
+      <nav class="nav">
+        <a href="/" class="nav-brand">School Management Database</a>
+        <div class="nav-links">
+          <a href="/dashboard" class="nav-link">Dashboard</a>
+          <a href="/users" class="nav-link">Users</a>
+          <a href="/classes" class="nav-link">Classes</a>
+          <a href="/subjects" class="nav-link">Subjects</a>
+          <a href="/student-grade" class="nav-link">Student Grade</a>
+          <a href="/class-subject" class="nav-link">Class Subject</a>
+          <a href="/class-student" class="nav-link">Class Student</a>
+          <a href="/school-year" class="nav-link">School Year</a>
+        </div>
+      </nav>
+
+      <div class="container">
+        <div class="header">
+          <h1 class="page-title">Subjects Management</h1>
+          <button class="add-button" onclick="addSubject()">Add Subject</button>
+        </div>
+        
+        <table class="subjects-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Subject Name</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="subjectsTableBody">
+            <!-- Data will be populated here -->
+          </tbody>
+        </table>
+      </div>
+
+      <script>
+        // Fetch and display subjects data
+        async function fetchSubjects() {
+          try {
+            const response = await fetch('/api/subjects');
+            if (!response.ok) {
+              throw new Error('Failed to fetch subjects');
+            }
+            const subjects = await response.json();
+            
+            const tableBody = document.getElementById('subjectsTableBody');
+            tableBody.innerHTML = subjects.map(subject => 
+              '<tr>' +
+                '<td>' + (subject.subject_id || '') + '</td>' +
+                '<td><span class="subject-badge">' + (subject.subject_name || '') + '</span></td>' +
+                '<td class="action-buttons">' +
+                  '<button class="edit-button" onclick="editSubject(' + subject.subject_id + ')">Edit</button>' +
+                  '<button class="delete-button" onclick="deleteSubject(' + subject.subject_id + ')">Delete</button>' +
+                '</td>' +
+              '</tr>'
+            ).join('');
+          } catch (error) {
+            console.error('Error fetching subjects:', error);
+            document.getElementById('subjectsTableBody').innerHTML = 
+              '<tr><td colspan="3" style="text-align: center; color: #dc2626;">Failed to load subjects data. Please try again later.</td></tr>';
+          }
+        }
+
+        function addSubject() {
+          // Implement add subject functionality
+          alert('Add subject functionality will be implemented');
+        }
+
+        function editSubject(id) {
+          // Implement edit subject functionality
+          alert('Edit subject functionality will be implemented for ID: ' + id);
+        }
+
+        async function deleteSubject(id) {
+          if (confirm('Are you sure you want to delete this subject?')) {
+            try {
+              const response = await fetch('/api/subjects/' + id, {
+                method: 'DELETE'
+              });
+              
+              if (!response.ok) {
+                throw new Error('Failed to delete subject');
+              }
+              
+              // Refresh the table after successful deletion
+              fetchSubjects();
+            } catch (error) {
+              console.error('Error deleting subject:', error);
+              alert('Failed to delete subject. Please try again.');
+            }
+          }
+        }
+
+        // Load subjects when the page loads
+        window.addEventListener('load', fetchSubjects);
+      </script>
+    </body>
+    </html>
+  `);
+});
+
+// Student Grade page route
+app.get('/student-grade', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Student Grades - School Management Database</title>
+      <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+          background: #f8fafc;
+        }
+
+        .nav {
+          background: #3b82f6;
+          color: white;
+          padding: 1rem;
+          display: flex;
+          align-items: center;
+          gap: 2rem;
+        }
+
+        .nav-brand {
+          font-weight: bold;
+          font-size: 1.1rem;
+          color: white;
+          text-decoration: none;
+        }
+
+        .nav-links {
+          display: flex;
+          gap: 1.5rem;
+        }
+
+        .nav-link {
+          color: white;
+          text-decoration: none;
+          font-size: 0.9rem;
+        }
+
+        .container {
+          max-width: 1200px;
+          margin: 2rem auto;
+          padding: 0 1rem;
+        }
+
+        .header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 2rem;
+        }
+
+        .page-title {
+          font-size: 1.5rem;
+          font-weight: 600;
+          color: #1e293b;
+        }
+
+        .add-button {
+          background: #2563eb;
+          color: white;
+          border: none;
+          padding: 0.5rem 1rem;
+          border-radius: 0.375rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+
+        .add-button:hover {
+          background: #1d4ed8;
+        }
+
+        .grades-table {
+          width: 100%;
+          background: white;
+          border-radius: 0.5rem;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          border-collapse: collapse;
+          overflow: hidden;
+        }
+
+        .grades-table th,
+        .grades-table td {
+          padding: 0.75rem 1rem;
+          text-align: left;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .grades-table th {
+          background: #f8fafc;
+          font-weight: 600;
+          color: #475569;
+          font-size: 0.875rem;
+        }
+
+        .grades-table tr:last-child td {
+          border-bottom: none;
+        }
+
+        .grades-table tbody tr:hover {
+          background: #f8fafc;
+        }
+
+        .action-buttons {
+          display: flex;
+          gap: 0.5rem;
+        }
+
+        .edit-button,
+        .delete-button {
+          padding: 0.25rem 0.75rem;
+          border-radius: 0.25rem;
+          border: none;
+          font-size: 0.875rem;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+
+        .edit-button {
+          background: #3b82f6;
+          color: white;
+        }
+
+        .edit-button:hover {
+          background: #2563eb;
+        }
+
+        .delete-button {
+          background: #ef4444;
+          color: white;
+        }
+
+        .delete-button:hover {
+          background: #dc2626;
+        }
+
+        .grade-badge {
+          padding: 0.25rem 0.5rem;
+          border-radius: 0.25rem;
+          font-size: 0.875rem;
+          font-weight: 500;
+        }
+
+        .grade-high {
+          background: #dcfce7;
+          color: #166534;
+        }
+
+        .grade-medium {
+          background: #fef3c7;
+          color: #92400e;
+        }
+
+        .grade-low {
+          background: #fee2e2;
+          color: #991b1b;
+        }
+
+        .quarter-badge {
+          padding: 0.25rem 0.5rem;
+          border-radius: 0.25rem;
+          font-size: 0.875rem;
+          font-weight: 500;
+          background: #e0f2fe;
+          color: #0369a1;
+        }
+      </style>
+    </head>
+    <body>
+      <nav class="nav">
+        <a href="/" class="nav-brand">School Management Database</a>
+        <div class="nav-links">
+          <a href="/dashboard" class="nav-link">Dashboard</a>
+          <a href="/users" class="nav-link">Users</a>
+          <a href="/classes" class="nav-link">Classes</a>
+          <a href="/subjects" class="nav-link">Subjects</a>
+          <a href="/student-grade" class="nav-link">Student Grade</a>
+          <a href="/class-subject" class="nav-link">Class Subject</a>
+          <a href="/class-student" class="nav-link">Class Student</a>
+          <a href="/school-year" class="nav-link">School Year</a>
+        </div>
+      </nav>
+
+      <div class="container">
+        <div class="header">
+          <h1 class="page-title">Student Grades Management</h1>
+          <button class="add-button" onclick="addGrade()">Add Grade</button>
+        </div>
+        
+        <table class="grades-table">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Class</th>
+              <th>Subject</th>
+              <th>Teacher</th>
+              <th>Quarter</th>
+              <th>Grade</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="gradesTableBody">
+            <!-- Data will be populated here -->
+          </tbody>
+        </table>
+      </div>
+
+      <script>
+        // Fetch and display grades data
+        async function fetchGrades() {
+          try {
+            const response = await fetch('/api/student-grades');
+            if (!response.ok) {
+              throw new Error('Failed to fetch grades');
+            }
+            const grades = await response.json();
+            
+            const tableBody = document.getElementById('gradesTableBody');
+            tableBody.innerHTML = grades.map(grade => {
+              let gradeClass = 'grade-medium';
+              if (grade.grade >= 90) gradeClass = 'grade-high';
+              else if (grade.grade < 75) gradeClass = 'grade-low';
+              
+              return '<tr>' +
+                '<td>' + (grade.student_name || '') + '</td>' +
+                '<td>Grade ' + (grade.grade_level || '') + '-' + (grade.section || '') + '</td>' +
+                '<td>' + (grade.subject_name || '') + '</td>' +
+                '<td>' + (grade.teacher_name || '') + '</td>' +
+                '<td><span class="quarter-badge">Q' + (grade.quarter || '') + '</span></td>' +
+                '<td><span class="grade-badge ' + gradeClass + '">' + (grade.grade || '') + '</span></td>' +
+                '<td class="action-buttons">' +
+                  '<button class="edit-button" onclick="editGrade(' + grade.student_id + ', ' + grade.subject_id + ')">Edit</button>' +
+                  '<button class="delete-button" onclick="deleteGrade(' + grade.student_id + ', ' + grade.subject_id + ')">Delete</button>' +
+                '</td>' +
+              '</tr>';
+            }).join('');
+          } catch (error) {
+            console.error('Error fetching grades:', error);
+            document.getElementById('gradesTableBody').innerHTML = 
+              '<tr><td colspan="7" style="text-align: center; color: #dc2626;">Failed to load grades data. Please try again later.</td></tr>';
+          }
+        }
+
+        function addGrade() {
+          // Implement add grade functionality
+          alert('Add grade functionality will be implemented');
+        }
+
+        function editGrade(studentId, subjectId) {
+          // Implement edit grade functionality
+          alert('Edit grade functionality will be implemented for Student ID: ' + studentId + ' and Subject ID: ' + subjectId);
+        }
+
+        async function deleteGrade(studentId, subjectId) {
+          if (confirm('Are you sure you want to delete this grade?')) {
+            try {
+              const response = await fetch('/api/student-grades/' + studentId + '/' + subjectId, {
+                method: 'DELETE'
+              });
+              
+              if (!response.ok) {
+                throw new Error('Failed to delete grade');
+              }
+              
+              // Refresh the table after successful deletion
+              fetchGrades();
+            } catch (error) {
+              console.error('Error deleting grade:', error);
+              alert('Failed to delete grade. Please try again.');
+            }
+          }
+        }
+
+        // Load grades when the page loads
+        window.addEventListener('load', fetchGrades);
+      </script>
+    </body>
+    </html>
+  `);
+});
+
 // Create a more robust server startup
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Server running on http://localhost:${PORT}`);

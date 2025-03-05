@@ -36,22 +36,11 @@ CREATE TABLE class (
     school_year VARCHAR(10) NOT NULL
 );
 
--- Student Grade Table
-CREATE TABLE student_grade (
-    user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
-    class_id INTEGER REFERENCES class(class_id) ON DELETE CASCADE,
-    subject_id INTEGER REFERENCES subject(subject_id) ON DELETE CASCADE,
-    teacher_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
-    quarter INTEGER CHECK (quarter BETWEEN 1 AND 4),
-    grade NUMERIC(5,2) CHECK (grade BETWEEN 0 AND 100),
-    PRIMARY KEY (user_id, class_id, subject_id, quarter)
-);
-
 -- Class-Student Table
 CREATE TABLE class_student (
     class_id INTEGER REFERENCES class(class_id) ON DELETE CASCADE,
-    user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
-    PRIMARY KEY (class_id, user_id)
+    student_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+    PRIMARY KEY (class_id, student_id)
 );
 
 -- Class-Subject Table
@@ -62,7 +51,18 @@ CREATE TABLE class_subject (
     PRIMARY KEY (class_id, subject_id, teacher_id)
 );
 
--- Insert Users (Including both teachers and students)
+-- Student Grade Table
+CREATE TABLE student_grade (
+    student_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+    class_id INTEGER REFERENCES class(class_id) ON DELETE CASCADE,
+    subject_id INTEGER REFERENCES subject(subject_id) ON DELETE CASCADE,
+    teacher_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+    quarter INTEGER CHECK (quarter BETWEEN 1 AND 4),
+    grade NUMERIC(5,2) CHECK (grade BETWEEN 0 AND 100),
+    PRIMARY KEY (student_id, class_id, subject_id, quarter)
+);
+
+-- Insert Users
 INSERT INTO users (email, user_type, fname, mname, lname, gender, teacher_status, firebase_uid) VALUES
 ('admin@school.com', 'Admin', 'Admin', NULL, 'User', 'M', FALSE, 'admin123'),
 ('john.doe@school.com', 'Teacher', 'John', 'A.', 'Doe', 'M', TRUE, 'teacher123'),
@@ -88,19 +88,21 @@ INSERT INTO class (grade_level, section, class_description, school_year) VALUES
 ('5', 'A', 'Regular Class', '2023-2024'),
 ('6', 'B', 'Advanced Class', '2023-2024');
 
--- Insert Student Grades (using user_id instead of student_id)
-INSERT INTO student_grade (user_id, class_id, subject_id, teacher_id, quarter, grade) VALUES
-(4, 1, 1, 2, 1, 85.50),  -- Alice, Class 5-A, Mathematics, John Doe, Q1
-(4, 1, 2, 2, 1, 88.75),  -- Alice, Class 5-A, Science, John Doe, Q1
-(5, 2, 1, 2, 1, 90.00),  -- Bob, Class 6-B, Mathematics, John Doe, Q1
-(5, 2, 2, 2, 1, 92.25);  -- Bob, Class 6-B, Science, John Doe, Q1
-
 -- Insert Class-Student Relationships
-INSERT INTO class_student (class_id, user_id) VALUES
-(1, 4),  -- Alice in class 1
-(2, 5);  -- Bob in class 2
+INSERT INTO class_student (class_id, student_id) VALUES
+(1, 4),  -- Alice in Grade 5-A
+(2, 5);  -- Bob in Grade 6-B
 
 -- Insert Class-Subject Relationships
 INSERT INTO class_subject (class_id, subject_id, teacher_id) VALUES
-(1, 1, 2),  -- Class 1, Math, John Doe
-(2, 2, 2);  -- Class 2, Science, John Doe
+(1, 1, 2),  -- Grade 5-A, Mathematics, John Doe
+(1, 2, 2),  -- Grade 5-A, Science, John Doe
+(2, 1, 2),  -- Grade 6-B, Mathematics, John Doe
+(2, 2, 3);  -- Grade 6-B, Science, Jane Doe
+
+-- Insert Student Grades
+INSERT INTO student_grade (student_id, class_id, subject_id, teacher_id, quarter, grade) VALUES
+(4, 1, 1, 2, 1, 85.50),  -- Alice, Grade 5-A, Mathematics, Q1
+(4, 1, 2, 2, 1, 88.75),  -- Alice, Grade 5-A, Science, Q1
+(5, 2, 1, 2, 1, 90.00),  -- Bob, Grade 6-B, Mathematics, Q1
+(5, 2, 2, 3, 1, 92.25);  -- Bob, Grade 6-B, Science, Q1

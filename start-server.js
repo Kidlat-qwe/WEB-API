@@ -2683,14 +2683,14 @@ app.get('/student-grade', (req, res) => {
               
               return '<tr>' +
                 '<td>' + (grade.student_name || '') + '</td>' +
-                '<td>Grade ' + (grade.grade_level || '') + '-' + (grade.section || '') + '</td>' +
+                '<td>' + (grade.class_name || '') + '</td>' +
                 '<td>' + (grade.subject_name || '') + '</td>' +
                 '<td>' + (grade.teacher_name || '') + '</td>' +
                 '<td><span class="quarter-badge">Q' + (grade.quarter || '') + '</span></td>' +
                 '<td><span class="grade-badge ' + gradeClass + '">' + (grade.grade || '') + '</span></td>' +
                 '<td class="action-buttons">' +
-                  '<button class="edit-button" onclick="editGrade(' + grade.student_id + ', ' + grade.subject_id + ')">Edit</button>' +
-                  '<button class="delete-button" onclick="deleteGrade(' + grade.student_id + ', ' + grade.subject_id + ')">Delete</button>' +
+                  '<button class="edit-button" onclick="editGrade(' + grade.student_id + ', ' + grade.class_id + ', ' + grade.subject_id + ', ' + grade.quarter + ')">Edit</button>' +
+                  '<button class="delete-button" onclick="deleteGrade(' + grade.student_id + ', ' + grade.class_id + ', ' + grade.subject_id + ', ' + grade.quarter + ')">Delete</button>' +
                 '</td>' +
               '</tr>';
             }).join('');
@@ -2706,15 +2706,15 @@ app.get('/student-grade', (req, res) => {
           alert('Add grade functionality will be implemented');
         }
 
-        function editGrade(studentId, subjectId) {
+        function editGrade(studentId, classId, subjectId, quarter) {
           // Implement edit grade functionality
-          alert('Edit grade functionality will be implemented for Student ID: ' + studentId + ' and Subject ID: ' + subjectId);
+          alert('Edit grade functionality will be implemented for Student ID: ' + studentId);
         }
 
-        async function deleteGrade(studentId, subjectId) {
+        async function deleteGrade(studentId, classId, subjectId, quarter) {
           if (confirm('Are you sure you want to delete this grade?')) {
             try {
-              const response = await fetch('/api/student-grades/' + studentId + '/' + subjectId, {
+              const response = await fetch(\`/api/student-grades/\${studentId}/\${classId}/\${subjectId}/\${quarter}\`, {
                 method: 'DELETE'
               });
               
@@ -2780,3 +2780,31 @@ pool.on('error', (err) => {
     console.error('Database connection was refused.');
   }
 }); 
+
+// GET endpoint to fetch all student grades with related information
+app.get('/api/student-grades', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        sg.student_id,
+        sg.class_id,
+        sg.subject_id,
+        CONCAT(s.fname, ' ', s.lname) as student_name,
+        CONCAT('Grade ', c.grade_level, '-', c.section) as class_name,
+        sub.subject_name,
+        CONCAT(t.fname, ' ', t.lname) as teacher_name,
+        sg.quarter,
+        sg.grade
+      FROM student_grade sg
+      JOIN users s ON sg.student_id = s.user_id
+      JOIN class c ON sg.class_id = c.class_id
+      JOIN subject sub ON sg.subject_id = sub.subject_id
+      JOIN users t ON sg.teacher_id = t.user_id
+      ORDER BY s.lname, s.fname, sub.subject_name, sg.quarter
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching student grades:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});

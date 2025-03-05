@@ -4,7 +4,9 @@ CREATE DATABASE school_db;
 -- Users Table
 CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
-    email VARCHAR(25),
+    username VARCHAR(50),
+    password VARCHAR(100),
+    email VARCHAR(100),
     user_type VARCHAR(20),
     fname VARCHAR(50),
     mname VARCHAR(50),
@@ -12,7 +14,8 @@ CREATE TABLE users (
     gender VARCHAR(1),
     teacher_status BOOLEAN,
     firebase_uid VARCHAR(128),
-    age INTEGER -- Added for student information
+    age INTEGER,
+    flag BOOLEAN DEFAULT TRUE
 );
 
 -- School Year Table

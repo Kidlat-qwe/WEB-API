@@ -295,14 +295,14 @@ app.get('/api/teachers/:id', async (req, res) => {
     const { id } = req.params;
     const query = `
       SELECT 
-        t.teacher_id,
-        t.fname,
-        t.mname,
-        t.lname,
-        t.gender,
-        t.status
-      FROM teacher t
-      WHERE t.teacher_id = $1
+        user_id as teacher_id,
+        fname,
+        mname,
+        lname,
+        gender,
+        teacher_status as status
+      FROM users
+      WHERE user_id = $1 AND user_type = 'Teacher'
     `;
     
     const result = await pool.query(query, [id]);
@@ -551,12 +551,18 @@ app.get('/api/classes/:classId/students', async (req, res) => {
   try {
     const { classId } = req.params;
     
-    // Join class_student with student table to get student details
+    // Join class_student with users table to get student details
     const result = await pool.query(`
-      SELECT s.student_id, s.fname, s.mname, s.lname, s.gender, s.age
+      SELECT 
+        u.user_id as student_id,
+        u.fname,
+        u.mname,
+        u.lname,
+        u.gender,
+        u.age
       FROM class_student cs
-      JOIN student s ON cs.student_id = s.student_id
-      WHERE cs.class_id = $1
+      JOIN users u ON cs.user_id = u.user_id
+      WHERE cs.class_id = $1 AND u.user_type = 'Student'
     `, [classId]);
     
     res.json(result.rows);
@@ -1457,17 +1463,18 @@ app.get('/api/grades/teacher/:teacherId', async (req, res) => {
     const { teacherId } = req.params;
     const result = await pool.query(`
       SELECT 
-        g.grade_id,
-        s.fname || ' ' || s.lname as student_name,
+        sg.user_id as student_id,
+        CONCAT(s.fname, ' ', s.lname) as student_name,
         sub.subject_name,
-        g.quarter,
-        g.grade,
-        g.school_year
-      FROM grade g
-      JOIN student s ON g.student_id = s.student_id
-      JOIN subject sub ON g.subject_id = sub.subject_id
-      WHERE g.teacher_id = $1
-      ORDER BY g.school_year DESC, sub.subject_name, s.lname, g.quarter
+        sg.quarter,
+        sg.grade,
+        c.school_year
+      FROM student_grade sg
+      JOIN users s ON sg.user_id = s.user_id
+      JOIN subject sub ON sg.subject_id = sub.subject_id
+      JOIN class c ON sg.class_id = c.class_id
+      WHERE sg.teacher_id = $1 AND s.user_type = 'Student'
+      ORDER BY c.school_year DESC, sub.subject_name, s.lname, sg.quarter
     `, [teacherId]);
 
     res.json(result.rows);
@@ -2050,8 +2057,8 @@ app.get('/', (req, res) => {
 app.get('/dashboard', async (req, res) => {
   try {
     // Get actual counts from database
-    const studentCount = await pool.query('SELECT COUNT(*) FROM student');
-    const teacherCount = await pool.query('SELECT COUNT(*) FROM teacher');
+    const studentCount = await pool.query('SELECT COUNT(*) FROM users WHERE user_type = \'Student\'');
+    const teacherCount = await pool.query('SELECT COUNT(*) FROM users WHERE user_type = \'Teacher\'');
     const classCount = await pool.query('SELECT COUNT(*) FROM class');
     const subjectCount = await pool.query('SELECT COUNT(*) FROM subject');
 

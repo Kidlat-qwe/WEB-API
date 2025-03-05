@@ -16,9 +16,9 @@ CREATE TABLE users (
 
 -- School Year Table
 CREATE TABLE school_year (
-    school_year_id SERIAL PRIMARY KEY,
-    school_year VARCHAR(10) NOT NULL,
-    is_active BOOLEAN DEFAULT TRUE
+    school_year_id SERIAL,
+    school_year character varying(10),
+    is_active boolean
 );
 
 -- Subject Table
@@ -71,9 +71,9 @@ INSERT INTO users (email, user_type, fname, mname, lname, gender, teacher_status
 ('bob.s@school.com', 'Student', 'Bob', 'L.', 'Smith', 'M', FALSE, 'student456');
 
 -- Insert School Years
-INSERT INTO school_year (school_year, is_active) VALUES
-('2023-2024', TRUE),
-('2024-2025', FALSE);
+INSERT INTO school_year (school_year_id, school_year, is_active) VALUES
+(1, '2023-2024', true),
+(2, '2024-2025', false);
 
 -- Insert Subjects
 INSERT INTO subject (subject_name) VALUES

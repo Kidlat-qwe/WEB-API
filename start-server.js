@@ -2808,3 +2808,573 @@ app.get('/api/student-grades', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// Class Subject page route
+app.get('/class-subject', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Class Subjects - School Management Database</title>
+      <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+          background: #f8fafc;
+        }
+
+        .nav {
+          background: #3b82f6;
+          color: white;
+          padding: 1rem;
+          display: flex;
+          align-items: center;
+          gap: 2rem;
+        }
+
+        .nav-brand {
+          font-weight: bold;
+          font-size: 1.1rem;
+          color: white;
+          text-decoration: none;
+        }
+
+        .nav-links {
+          display: flex;
+          gap: 1.5rem;
+        }
+
+        .nav-link {
+          color: white;
+          text-decoration: none;
+          font-size: 0.9rem;
+        }
+
+        .container {
+          max-width: 1200px;
+          margin: 2rem auto;
+          padding: 0 1rem;
+        }
+
+        .header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 2rem;
+        }
+
+        .page-title {
+          font-size: 1.5rem;
+          font-weight: 600;
+          color: #1e293b;
+        }
+
+        .add-button {
+          background: #2563eb;
+          color: white;
+          border: none;
+          padding: 0.5rem 1rem;
+          border-radius: 0.375rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+
+        .add-button:hover {
+          background: #1d4ed8;
+        }
+
+        .table {
+          width: 100%;
+          background: white;
+          border-radius: 0.5rem;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          border-collapse: collapse;
+          overflow: hidden;
+        }
+
+        .table th,
+        .table td {
+          padding: 0.75rem 1rem;
+          text-align: left;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .table th {
+          background: #f8fafc;
+          font-weight: 600;
+          color: #475569;
+          font-size: 0.875rem;
+        }
+
+        .table tr:last-child td {
+          border-bottom: none;
+        }
+
+        .table tbody tr:hover {
+          background: #f8fafc;
+        }
+
+        .action-buttons {
+          display: flex;
+          gap: 0.5rem;
+        }
+
+        .edit-button,
+        .delete-button {
+          padding: 0.25rem 0.75rem;
+          border-radius: 0.25rem;
+          border: none;
+          font-size: 0.875rem;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+
+        .edit-button {
+          background: #3b82f6;
+          color: white;
+        }
+
+        .edit-button:hover {
+          background: #2563eb;
+        }
+
+        .delete-button {
+          background: #ef4444;
+          color: white;
+        }
+
+        .delete-button:hover {
+          background: #dc2626;
+        }
+
+        .badge {
+          padding: 0.25rem 0.5rem;
+          border-radius: 0.25rem;
+          font-size: 0.875rem;
+          font-weight: 500;
+        }
+
+        .class-badge {
+          background: #e0f2fe;
+          color: #0369a1;
+        }
+
+        .subject-badge {
+          background: #fef3c7;
+          color: #92400e;
+        }
+
+        .teacher-badge {
+          background: #dcfce7;
+          color: #166534;
+        }
+      </style>
+    </head>
+    <body>
+      <nav class="nav">
+        <a href="/" class="nav-brand">School Management Database</a>
+        <div class="nav-links">
+          <a href="/dashboard" class="nav-link">Dashboard</a>
+          <a href="/users" class="nav-link">Users</a>
+          <a href="/classes" class="nav-link">Classes</a>
+          <a href="/subjects" class="nav-link">Subjects</a>
+          <a href="/student-grade" class="nav-link">Student Grade</a>
+          <a href="/class-subject" class="nav-link">Class Subject</a>
+          <a href="/class-student" class="nav-link">Class Student</a>
+          <a href="/school-year" class="nav-link">School Year</a>
+        </div>
+      </nav>
+
+      <div class="container">
+        <div class="header">
+          <h1 class="page-title">Class Subject Management</h1>
+          <button class="add-button" onclick="addClassSubject()">Add Class Subject</button>
+        </div>
+        
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Class</th>
+              <th>Subject</th>
+              <th>Teacher</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="classSubjectTableBody">
+            <!-- Data will be populated here -->
+          </tbody>
+        </table>
+      </div>
+
+      <script>
+        async function fetchClassSubjects() {
+          try {
+            const response = await fetch('/api/class-subjects');
+            if (!response.ok) {
+              throw new Error('Failed to fetch class subjects');
+            }
+            const classSubjects = await response.json();
+            
+            const tableBody = document.getElementById('classSubjectTableBody');
+            tableBody.innerHTML = classSubjects.map(cs => 
+              '<tr>' +
+                '<td><span class="badge class-badge">Grade ' + cs.grade_level + '-' + cs.section + '</span></td>' +
+                '<td><span class="badge subject-badge">' + cs.subject_name + '</span></td>' +
+                '<td><span class="badge teacher-badge">' + cs.teacher_name + '</span></td>' +
+                '<td class="action-buttons">' +
+                  '<button class="edit-button" onclick="editClassSubject(' + cs.class_id + ', ' + cs.subject_id + ', ' + cs.teacher_id + ')">Edit</button>' +
+                  '<button class="delete-button" onclick="deleteClassSubject(' + cs.class_id + ', ' + cs.subject_id + ', ' + cs.teacher_id + ')">Delete</button>' +
+                '</td>' +
+              '</tr>'
+            ).join('');
+          } catch (error) {
+            console.error('Error fetching class subjects:', error);
+            document.getElementById('classSubjectTableBody').innerHTML = 
+              '<tr><td colspan="4" style="text-align: center; color: #dc2626;">Failed to load class subjects data. Please try again later.</td></tr>';
+          }
+        }
+
+        function addClassSubject() {
+          alert('Add class subject functionality will be implemented');
+        }
+
+        function editClassSubject(classId, subjectId, teacherId) {
+          alert('Edit class subject functionality will be implemented');
+        }
+
+        async function deleteClassSubject(classId, subjectId, teacherId) {
+          if (confirm('Are you sure you want to delete this class subject assignment?')) {
+            try {
+              const response = await fetch(\`/api/class-subjects/\${classId}/\${subjectId}/\${teacherId}\`, {
+                method: 'DELETE'
+              });
+              
+              if (!response.ok) {
+                throw new Error('Failed to delete class subject');
+              }
+              
+              fetchClassSubjects();
+            } catch (error) {
+              console.error('Error deleting class subject:', error);
+              alert('Failed to delete class subject. Please try again.');
+            }
+          }
+        }
+
+        window.addEventListener('load', fetchClassSubjects);
+      </script>
+    </body>
+    </html>
+  `);
+});
+
+// Class Student page route
+app.get('/class-student', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Class Students - School Management Database</title>
+      <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+          background: #f8fafc;
+        }
+
+        .nav {
+          background: #3b82f6;
+          color: white;
+          padding: 1rem;
+          display: flex;
+          align-items: center;
+          gap: 2rem;
+        }
+
+        .nav-brand {
+          font-weight: bold;
+          font-size: 1.1rem;
+          color: white;
+          text-decoration: none;
+        }
+
+        .nav-links {
+          display: flex;
+          gap: 1.5rem;
+        }
+
+        .nav-link {
+          color: white;
+          text-decoration: none;
+          font-size: 0.9rem;
+        }
+
+        .container {
+          max-width: 1200px;
+          margin: 2rem auto;
+          padding: 0 1rem;
+        }
+
+        .header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 2rem;
+        }
+
+        .page-title {
+          font-size: 1.5rem;
+          font-weight: 600;
+          color: #1e293b;
+        }
+
+        .add-button {
+          background: #2563eb;
+          color: white;
+          border: none;
+          padding: 0.5rem 1rem;
+          border-radius: 0.375rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+
+        .add-button:hover {
+          background: #1d4ed8;
+        }
+
+        .table {
+          width: 100%;
+          background: white;
+          border-radius: 0.5rem;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          border-collapse: collapse;
+          overflow: hidden;
+        }
+
+        .table th,
+        .table td {
+          padding: 0.75rem 1rem;
+          text-align: left;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .table th {
+          background: #f8fafc;
+          font-weight: 600;
+          color: #475569;
+          font-size: 0.875rem;
+        }
+
+        .table tr:last-child td {
+          border-bottom: none;
+        }
+
+        .table tbody tr:hover {
+          background: #f8fafc;
+        }
+
+        .action-buttons {
+          display: flex;
+          gap: 0.5rem;
+        }
+
+        .edit-button,
+        .delete-button {
+          padding: 0.25rem 0.75rem;
+          border-radius: 0.25rem;
+          border: none;
+          font-size: 0.875rem;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+
+        .edit-button {
+          background: #3b82f6;
+          color: white;
+        }
+
+        .edit-button:hover {
+          background: #2563eb;
+        }
+
+        .delete-button {
+          background: #ef4444;
+          color: white;
+        }
+
+        .delete-button:hover {
+          background: #dc2626;
+        }
+
+        .badge {
+          padding: 0.25rem 0.5rem;
+          border-radius: 0.25rem;
+          font-size: 0.875rem;
+          font-weight: 500;
+        }
+
+        .class-badge {
+          background: #e0f2fe;
+          color: #0369a1;
+        }
+
+        .student-badge {
+          background: #fef9c3;
+          color: #854d0e;
+        }
+      </style>
+    </head>
+    <body>
+      <nav class="nav">
+        <a href="/" class="nav-brand">School Management Database</a>
+        <div class="nav-links">
+          <a href="/dashboard" class="nav-link">Dashboard</a>
+          <a href="/users" class="nav-link">Users</a>
+          <a href="/classes" class="nav-link">Classes</a>
+          <a href="/subjects" class="nav-link">Subjects</a>
+          <a href="/student-grade" class="nav-link">Student Grade</a>
+          <a href="/class-subject" class="nav-link">Class Subject</a>
+          <a href="/class-student" class="nav-link">Class Student</a>
+          <a href="/school-year" class="nav-link">School Year</a>
+        </div>
+      </nav>
+
+      <div class="container">
+        <div class="header">
+          <h1 class="page-title">Class Student Management</h1>
+          <button class="add-button" onclick="addClassStudent()">Add Class Student</button>
+        </div>
+        
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Class</th>
+              <th>Student</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="classStudentTableBody">
+            <!-- Data will be populated here -->
+          </tbody>
+        </table>
+      </div>
+
+      <script>
+        async function fetchClassStudents() {
+          try {
+            const response = await fetch('/api/class-students');
+            if (!response.ok) {
+              throw new Error('Failed to fetch class students');
+            }
+            const classStudents = await response.json();
+            
+            const tableBody = document.getElementById('classStudentTableBody');
+            tableBody.innerHTML = classStudents.map(cs => 
+              '<tr>' +
+                '<td><span class="badge class-badge">Grade ' + cs.grade_level + '-' + cs.section + '</span></td>' +
+                '<td><span class="badge student-badge">' + cs.student_name + '</span></td>' +
+                '<td class="action-buttons">' +
+                  '<button class="edit-button" onclick="editClassStudent(' + cs.class_id + ', ' + cs.student_id + ')">Edit</button>' +
+                  '<button class="delete-button" onclick="deleteClassStudent(' + cs.class_id + ', ' + cs.student_id + ')">Delete</button>' +
+                '</td>' +
+              '</tr>'
+            ).join('');
+          } catch (error) {
+            console.error('Error fetching class students:', error);
+            document.getElementById('classStudentTableBody').innerHTML = 
+              '<tr><td colspan="3" style="text-align: center; color: #dc2626;">Failed to load class students data. Please try again later.</td></tr>';
+          }
+        }
+
+        function addClassStudent() {
+          alert('Add class student functionality will be implemented');
+        }
+
+        function editClassStudent(classId, studentId) {
+          alert('Edit class student functionality will be implemented');
+        }
+
+        async function deleteClassStudent(classId, studentId) {
+          if (confirm('Are you sure you want to delete this class student assignment?')) {
+            try {
+              const response = await fetch(\`/api/class-students/\${classId}/\${studentId}\`, {
+                method: 'DELETE'
+              });
+              
+              if (!response.ok) {
+                throw new Error('Failed to delete class student');
+              }
+              
+              fetchClassStudents();
+            } catch (error) {
+              console.error('Error deleting class student:', error);
+              alert('Failed to delete class student. Please try again.');
+            }
+          }
+        }
+
+        window.addEventListener('load', fetchClassStudents);
+      </script>
+    </body>
+    </html>
+  `);
+});
+
+// API endpoint for class subjects
+app.get('/api/class-subjects', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        cs.class_id,
+        cs.subject_id,
+        cs.teacher_id,
+        c.grade_level,
+        c.section,
+        s.subject_name,
+        CONCAT(u.fname, ' ', u.lname) as teacher_name
+      FROM class_subject cs
+      JOIN class c ON cs.class_id = c.class_id
+      JOIN subject s ON cs.subject_id = s.subject_id
+      JOIN users u ON cs.teacher_id = u.user_id
+      ORDER BY c.grade_level, c.section, s.subject_name
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching class subjects:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// API endpoint for class students
+app.get('/api/class-students', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        cs.class_id,
+        cs.student_id,
+        c.grade_level,
+        c.section,
+        CONCAT(u.fname, ' ', u.lname) as student_name
+      FROM class_student cs
+      JOIN class c ON cs.class_id = c.class_id
+      JOIN users u ON cs.student_id = u.user_id
+      ORDER BY c.grade_level, c.section, u.lname, u.fname
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching class students:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
